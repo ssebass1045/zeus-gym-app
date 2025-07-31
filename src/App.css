@@ -1,38 +1,224 @@
-.App {
-  text-align: center;
+/* src/App.css */
+
+:root {
+    --primary-color: #3a3a3a; /* Dark Gray */
+    --secondary-color: #f5d142; /* Yellow */
+    --background-color: #f4f4f4; /* Light Gray */
+    --text-color: #333;
+    --white-color: #fff;
+    --danger-color: #d9534f;
+    --success-color: #5cb85c;
+    --warning-color: #f0ad4e;
+    --dark-text-color: #222; /* Nuevo: para texto oscuro sobre fondos claros */
+    --light-text-color: #eee; /* Nuevo: para texto claro sobre fondos oscuros */
 }
 
-.App-logo {
-  height: 40vmin;
-  pointer-events: none;
+body {
+    font-family: 'Roboto', sans-serif;
+    margin: 0;
+    padding: 0;
+    background-color: var(--background-color);
+    color: var(--text-color);
 }
 
-@media (prefers-reduced-motion: no-preference) {
-  .App-logo {
-    animation: App-logo-spin infinite 20s linear;
-  }
+.app {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
 }
 
-.App-header {
-  background-color: #282c34;
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  font-size: calc(10px + 2vmin);
+.header {
+    background-color: var(--primary-color);
+    color: var(--white-color);
+    padding: 1rem 2rem; /* Ajustado padding */
+    display: flex; /* Usar flexbox para alinear elementos */
+    justify-content: space-between; /* Espacio entre título y nav */
+    align-items: center; /* Centrar verticalmente */
+    flex-wrap: wrap; /* Permitir que los elementos se envuelvan en pantallas pequeñas */
+}
+
+.header h1 {
+    margin: 0; /* Eliminar margen predeterminado */
+    color: var(--white-color); /* Asegurar que el título sea blanco */
+    font-size: 1.8rem; /* Ajustar tamaño de fuente */
+}
+
+.header nav {
+    margin-top: 0; /* Eliminar margen superior si existe */
+}
+
+.nav-links {
+    list-style: none; /* Eliminar viñetas de la lista */
+    margin: 0;
+    padding: 0;
+    display: flex; /* Hacer que los enlaces sean horizontales */
+    gap: 1.5rem; /* Espacio entre los enlaces */
+    flex-wrap: wrap; /* Permitir que los enlaces se envuelvan */
+    justify-content: center; /* Centrar enlaces si se envuelven */
+}
+
+.nav-links li {
+    margin: 0; /* Eliminar margen de los ítems de la lista */
+}
+
+.nav-links a {
+    color: var(--light-text-color); /* Color de texto claro para los enlaces */
+    text-decoration: none; /* Eliminar subrayado */
+    font-weight: 500; /* Peso de la fuente */
+    font-size: 1.05rem; /* Tamaño de la fuente */
+    padding: 0.5rem 0.8rem; /* Padding para hacer los enlaces más clickeables */
+    border-radius: 5px; /* Bordes ligeramente redondeados */
+    transition: background-color 0.3s ease, color 0.3s ease; /* Transición suave para hover */
+}
+
+.nav-links a:hover,
+.nav-links a.active { /* Estilo para el enlace activo o al pasar el ratón */
+    background-color: var(--secondary-color); /* Fondo amarillo al pasar el ratón */
+    color: var(--primary-color); /* Texto oscuro sobre el fondo amarillo */
+}
+
+/* Media queries para responsividad */
+@media (max-width: 768px) {
+    .header {
+        flex-direction: column; /* Apilar título y nav en pantallas pequeñas */
+        padding: 1rem;
+    }
+
+    .header h1 {
+        margin-bottom: 1rem; /* Espacio entre título y nav */
+    }
+
+    .nav-links {
+        flex-direction: column; /* Apilar enlaces en pantallas muy pequeñas */
+        gap: 0.5rem; /* Menos espacio entre enlaces apilados */
+        width: 100%; /* Ocupar todo el ancho */
+        align-items: center; /* Centrar enlaces apilados */
+    }
+
+    .nav-links a {
+        width: calc(100% - 1.6rem); /* Ajustar ancho para padding */
+        text-align: center; /* Centrar texto en enlaces apilados */
+    }
+}
+
+
+.main {
+    flex: 1;
+    padding: 1rem;
+}
+
+.footer {
+    background-color: var(--primary-color);
+    color: var(--white-color);
+    padding: 1rem;
+    text-align: center;
+    position: sticky;
+    bottom: 0;
+}
+
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 1rem;
+}
+
+h1, h2, h3, h4, h5, h6 {
+    color: var(--primary-color);
+}
+
+.btn {
+    padding: 0.5rem 1rem;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 1rem;
+    text-transform: uppercase;
+}
+
+.btn-primary {
+    background-color: var(--secondary-color);
+    color: var(--primary-color);
+}
+
+.btn-danger {
+    background-color: var(--danger-color);
+    color: var(--white-color);
+}
+
+.btn-success {
+    background-color: var(--success-color);
+    color: var(--white-color);
+}
+
+.table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 1rem;
+}
+
+.table th, .table td {
+    border: 1px solid #ddd;
+    padding: 0.5rem;
+    text-align: left;
+}
+
+.table th {
+    background-color: var(--primary-color);
+    color: var(--white-color);
+}
+
+.form-group {
+    margin-bottom: 1rem;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 0.5rem;
+}
+
+.form-group input, .form-group select, .form-group textarea {
+    width: 100%;
+    padding: 0.5rem;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+}
+
+.card {
+    background-color: var(--white-color);
+    border-radius: 5px;
+    padding: 1rem;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    margin-bottom: 1rem;
+}
+
+.alert {
+    padding: 1rem;
+    border-radius: 5px;
+    margin-bottom: 1rem;
+}
+
+.alert-danger {
+    background-color: var(--danger-color);
+    color: var(--white-color);
+}
+
+.alert-warning {
+    background-color: var(--warning-color);
+    color: var(--white-color);
+}
+
+.btn-logout {
+  background-color: #dc3545; /* Un color rojo para la acción de cerrar sesión */
   color: white;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 1rem;
+  font-weight: 500;
+  transition: background-color 0.3s ease;
 }
 
-.App-link {
-  color: #61dafb;
-}
-
-@keyframes App-logo-spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
+.btn-logout:hover {
+  background-color: #c82333;
 }

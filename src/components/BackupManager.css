@@ -1,0 +1,53 @@
+/* src/components/BackupManager.css */
+.backup-panel {
+  background-color: #1e1e1e;
+  padding: 1.5rem;
+  border-radius: 8px;
+  grid-column: 1 / -1;
+  border-top: 2px solid #ffc107;
+}
+
+.backup-panel h3 {
+  margin-top: 0;
+  color: #ffc107;
+}
+
+.backup-panel p {
+  color: #aaa;
+  margin-bottom: 1.5rem;
+}
+
+.backup-actions {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+}
+
+.export-button, .import-label {
+  padding: 0.8rem 1.5rem;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 1rem;
+  font-weight: bold;
+  text-align: center;
+  transition: background-color 0.3s ease;
+}
+
+.export-button {
+  background-color: #007bff;
+  color: white;
+}
+
+.export-button:hover {
+  background-color: #0056b3;
+}
+
+.import-label {
+  background-color: #28a745;
+  color: white;
+}
+
+.import-label:hover {
+  background-color: #218838;
+}

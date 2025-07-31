@@ -1,0 +1,90 @@
+/* src/components/BodyComposition.css */
+.body-comp-card {
+  background-color: #1e1e1e;
+  padding: 1.5rem;
+  border-radius: 8px;
+  border: 1px solid #333;
+  margin-top: 1.5rem;
+}
+
+.body-comp-card h3 {
+  margin-top: 0;
+  border-bottom: 2px solid #00aaff;
+  padding-bottom: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.comp-form {
+  margin-bottom: 1.5rem;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.form-grid label {
+  display: flex;
+  flex-direction: column;
+  font-size: 0.9rem;
+  color: #aaa;
+}
+
+.form-grid input {
+  padding: 0.7rem;
+  border-radius: 5px;
+  border: 1px solid #555;
+  background-color: #333;
+  color: #e0e0e0;
+  margin-top: 0.3rem;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.comp-form button {
+  background-color: #00aaff;
+  color: white;
+  padding: 0.8rem 1.5rem;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 1rem;
+  transition: background-color 0.3s ease;
+  width: 100%;
+}
+
+.comp-form button:hover {
+  background-color: #0077cc;
+}
+
+.comp-history h4 {
+  margin-bottom: 1rem;
+}
+
+.history-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+.history-table th, .history-table td {
+  padding: 0.8rem;
+  border-bottom: 1px solid #444;
+  text-align: center;
+}
+
+.history-table th {
+  color: #00aaff;
+  font-size: 0.9rem;
+}
+
+.history-table td {
+  font-size: 0.95rem;
+}
+
+.no-history {
+  color: #aaa;
+  font-style: italic;
+}
