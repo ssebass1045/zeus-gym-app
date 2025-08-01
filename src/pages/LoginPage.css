@@ -1,29 +1,63 @@
 /* src/pages/LoginPage.css */
+
 .login-page {
   display: flex;
   justify-content: center;
   align-items: center;
   min-height: 100vh;
-  background-color: #f0f2f5;
+  /* Fondo con gradiente sutil y moderno */
+  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+  font-family: 'Roboto', sans-serif; /* Asegura una fuente consistente */
 }
 
 .login-container {
   background-color: white;
-  padding: 2rem 3rem;
-  border-radius: 10px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  padding: 2.5rem;
+  border-radius: 15px; /* Bordes más redondeados */
+  /* Sombra más suave y elevada */
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
   width: 100%;
-  max-width: 400px;
+  max-width: 420px;
   text-align: center;
+  /* Animación de entrada */
+  animation: fadeIn 0.5s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Estilo para el logo */
+.login-logo {
+  font-size: 3.5rem;
+  line-height: 1;
+  margin-bottom: 1rem;
+  color: #f5d142; /* Color amarillo de tu tema */
+  text-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 
 .login-container h2 {
-  margin-bottom: 1.5rem;
+  margin-bottom: 0.5rem;
   color: #333;
+  font-weight: 700; /* Fuente más audaz */
+  font-size: 1.8rem;
+}
+
+.login-subtitle {
+  color: #666;
+  margin-bottom: 2rem;
+  font-size: 1rem;
 }
 
 .login-container .form-group {
-  margin-bottom: 1rem;
+  margin-bottom: 1.5rem;
   text-align: left;
 }
 
@@ -32,44 +66,61 @@
   margin-bottom: 0.5rem;
   font-weight: 500;
   color: #555;
+  font-size: 0.9rem;
 }
 
 .login-container input {
   width: 100%;
-  padding: 0.75rem;
+  padding: 0.8rem 1rem;
   border: 1px solid #ccc;
-  border-radius: 5px;
+  border-radius: 8px; /* Bordes más redondeados */
   font-size: 1rem;
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
 }
 
-.login-container button {
+/* Efecto de foco en los inputs */
+.login-container input:focus {
+  outline: none;
+  border-color: #007bff; /* Color primario de tu tema */
+  box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.25);
+}
+
+.login-button { /* Renombramos para evitar conflictos */
   width: 100%;
-  padding: 0.75rem;
+  padding: 0.9rem;
   border: none;
-  border-radius: 5px;
-  background-color: #007bff;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
   color: white;
   font-size: 1.1rem;
   font-weight: bold;
   cursor: pointer;
-  transition: background-color 0.3s ease;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
   margin-top: 1rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
-.login-container button:hover {
-  background-color: #0056b3;
+.login-button:hover {
+  /* Efecto de elevación al pasar el ratón */
+  transform: translateY(-2px);
+  box-shadow: 0 4px 15px rgba(0, 123, 255, 0.3);
 }
 
-.login-container button:disabled {
-  background-color: #aaa;
+.login-button:disabled {
+  background: #aaa;
   cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
 }
 
 .error-message {
   color: #d9534f;
-  background-color: #f2dede;
-  border: 1px solid #ebccd1;
-  padding: 0.75rem;
-  border-radius: 5px;
-  margin-top: 1rem;
+  background-color: #f8d7da;
+  border: 1px solid #f5c6cb;
+  padding: 0.8rem;
+  border-radius: 8px;
+  margin-top: 1.5rem;
+  font-size: 0.9rem;
+  text-align: center;
 }

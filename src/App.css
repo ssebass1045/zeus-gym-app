@@ -1,10 +1,10 @@
 /* src/App.css */
 
 :root {
-    --primary-color: #f7dc10; /* yellow */
+    --primary-color: #225670; /* Dark Gray */
     --secondary-color: #f5d142; /* Yellow */
     --background-color: #f4f4f4; /* Light Gray */
-    --text-color: #ffffff;
+    --text-color: #333;
     --white-color: #fff;
     --danger-color: #d9534f;
     --success-color: #5cb85c;
@@ -122,7 +122,7 @@ body {
     padding: 0 1rem;
 }
 
-h1, h2, h3, h4, h5, h6 {
+h1, h2, h3, h5, h6 {
     color: var(--primary-color);
 }
 

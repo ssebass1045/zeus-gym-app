@@ -5,6 +5,7 @@
   border-radius: 8px;
   border: 1px solid #333;
   margin-top: 1.5rem;
+  color:#fff
 }
 
 .body-comp-card h3 {
@@ -12,6 +13,7 @@
   border-bottom: 2px solid #00aaff;
   padding-bottom: 0.5rem;
   margin-bottom: 1rem;
+  color: #7b0de2;
 }
 
 .comp-form {
@@ -29,7 +31,7 @@
   display: flex;
   flex-direction: column;
   font-size: 0.9rem;
-  color: #aaa;
+  color: #ffffff;
 }
 
 .form-grid input {
@@ -85,6 +87,6 @@
 }
 
 .no-history {
-  color: #aaa;
+  color: #ffffff;
   font-style: italic;
 }

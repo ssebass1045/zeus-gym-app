@@ -35,7 +35,7 @@
 
 /* Alerts Panel Styles */
 .alerts-panel, .birthdays-panel, .plans-panel {
-  background-color: #1e1e1e;
+  background-color: #ffffff;
   padding: 1.5rem;
   border-radius: 8px;
   grid-column: 1 / -1; /* Make these panels span full width */
@@ -58,7 +58,7 @@
 }
 
 .alert-item, .birthday-item {
-  background-color: #2a2a2a;
+  background-color: #2677f0a3;
   padding: 0.8rem 1rem;
   border-radius: 5px;
   margin-bottom: 0.5rem;
@@ -70,6 +70,7 @@
 
 .alert-item .user-name, .birthday-item .user-name {
   font-weight: bold;
+  color: #ffffff;
 }
 
 .alert-item .alert-detail {
