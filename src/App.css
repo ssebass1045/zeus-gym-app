@@ -1,10 +1,10 @@
 /* src/App.css */
 
 :root {
-    --primary-color: #3a3a3a; /* Dark Gray */
+    --primary-color: #f7dc10; /* yellow */
     --secondary-color: #f5d142; /* Yellow */
     --background-color: #f4f4f4; /* Light Gray */
-    --text-color: #333;
+    --text-color: #ffffff;
     --white-color: #fff;
     --danger-color: #d9534f;
     --success-color: #5cb85c;
@@ -222,3 +222,13 @@ h1, h2, h3, h4, h5, h6 {
 .btn-logout:hover {
   background-color: #c82333;
 }
+
+.table th {
+  cursor: pointer;
+  user-select: none; /* Evita que el texto se seleccione al hacer clic */
+}
+
+.table th:hover {
+  background-color: #4a4a4a; /* Un color ligeramente más claro para el hover */
+}
+

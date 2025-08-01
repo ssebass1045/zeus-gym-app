@@ -19,10 +19,12 @@ const Users = () => {
   });
   const [showAddUserForm, setShowAddUserForm] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [sortConfig, setSortConfig] = useState({ key: null, direction: 'ascending' }); 
 
   const handleInputChange = (e) => {
     setNewUser({ ...newUser, [e.target.name]: e.target.value });
   };
+
 
   // --- NUEVA FUNCIÓN: handleDeleteUser ---
   const handleDeleteUser = (userId, userName) => {
@@ -123,6 +125,49 @@ const Users = () => {
     user.plan.toLowerCase().includes(searchTerm.toLowerCase())
   );
   // --- FIN NUEVA LÓGICA DE FILTRADO ---
+  // --- NUEVA LÓGICA DE ORDENACIÓN ---
+  const sortedUsers = React.useMemo(() => {
+    let sortableUsers = [...filteredUsers];
+    if (sortConfig.key !== null) {
+      sortableUsers.sort((a, b) => {
+        // Manejar fechas y otros tipos de datos
+        const aValue = a[sortConfig.key];
+        const bValue = b[sortConfig.key];
+
+        if (sortConfig.key === 'fechaVencimiento') {
+          // Tratar fechas nulas o 'N/A' como muy lejanas
+          const dateA = aValue && aValue !== 'N/A (Tiquetera)' ? new Date(aValue) : new Date('9999-12-31');
+          const dateB = bValue && bValue !== 'N/A (Tiquetera)' ? new Date(bValue) : new Date('9999-12-31');
+          if (dateA < dateB) {
+            return sortConfig.direction === 'ascending' ? -1 : 1;
+          }
+          if (dateA > dateB) {
+            return sortConfig.direction === 'ascending' ? 1 : -1;
+          }
+          return 0;
+        } else {
+          // Ordenación genérica para otros campos
+          if (aValue < bValue) {
+            return sortConfig.direction === 'ascending' ? -1 : 1;
+          }
+          if (aValue > bValue) {
+            return sortConfig.direction === 'ascending' ? 1 : -1;
+          }
+          return 0;
+        }
+      });
+    }
+    return sortableUsers;
+  }, [filteredUsers, sortConfig]);
+  // --- FIN NUEVA LÓGICA DE ORDENACIÓN ---
+
+  const requestSort = (key) => {
+    let direction = 'ascending';
+    if (sortConfig.key === key && sortConfig.direction === 'ascending') {
+      direction = 'descending';
+    }
+    setSortConfig({ key, direction });
+  };
 
   return (
     <div className="users">
@@ -291,15 +336,15 @@ const Users = () => {
         <table className="table">
           <thead>
             <tr>
-              <th>Nombre</th>
-              <th>Plan</th>
-              <th>Vencimiento</th>
-              <th>Deuda</th>
+              <th onClick={() => requestSort('nombre')}>Nombre</th>
+              <th onClick={() => requestSort('plan')}>Plan</th>
+              <th onClick={() => requestSort('fechaVencimiento')}>Vencimiento</th>
+              <th onClick={() => requestSort('debe')}>Deuda</th>
               <th>Acciones</th>
             </tr>
           </thead>
           <tbody>
-            {filteredUsers.map((user) => (
+            {sortedUsers.map((user) => (
               <tr key={user.id}>
                 <td>{user.nombre}</td>
                 <td>{user.plan}</td>

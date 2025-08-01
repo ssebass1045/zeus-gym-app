@@ -208,7 +208,7 @@ const Dashboard = () => {
           <h4>Próximos a Vencer (5 días)</h4>
           {upcomingExpirations.length > 0 ? upcomingExpirations.map(u => (
             <div key={u.id} className="alert-item">
-              <Link to={`/user/${u.id}`} className="user-name">{u.nombre}</Link>
+              <Link to={`/users/${u.id}`} className="user-name">{u.nombre}</Link>
               <span className="alert-detail">Vence: {u.fechaVencimiento}</span>
             </div>
           )) : <p className="no-alerts">Ningún usuario próximo a vencer.</p>}
@@ -217,7 +217,7 @@ const Dashboard = () => {
           <h4>Usuarios Vencidos</h4>
           {expiredUsers.length > 0 ? expiredUsers.map(u => (
             <div key={u.id} className="alert-item">
-              <Link to={`/user/${u.id}`} className="user-name">{u.nombre}</Link>
+              <Link to={`/users/${u.id}`} className="user-name">{u.nombre}</Link>
               <span className="alert-detail">Venció: {u.fechaVencimiento}</span>
             </div>
           )) : <p className="no-alerts">Ningún usuario vencido.</p>}
@@ -226,7 +226,7 @@ const Dashboard = () => {
           <h4>Usuarios con Deuda</h4>
           {usersWithDebt.length > 0 ? usersWithDebt.map(u => (
             <div key={u.id} className="alert-item">
-              <Link to={`/user/${u.id}`} className="user-name">{u.nombre}</Link>
+              <Link to={`/users/${u.id}`} className="user-name">{u.nombre}</Link>
               <span className="alert-detail">Debe: ${u.debe.toLocaleString()}</span>
             </div>
           )) : <p className="no-alerts">Ningún usuario con deudas.</p>}
@@ -238,7 +238,7 @@ const Dashboard = () => {
           <h3>Próximos Cumpleaños (30 días)</h3>
           {upcomingBirthdays.length > 0 ? upcomingBirthdays.map(u => (
               <div key={u.id} className="birthday-item">
-                  <Link to={`/user/${u.id}`} className="user-name">{u.nombre}</Link>
+                  <Link to={`/users/${u.id}`} className="user-name">{u.nombre}</Link>
                   <span className="birthday-detail">Cumple: {u.cumpleanos}</span>
               </div>
           )) : <p className="no-birthdays">No hay cumpleaños próximos.</p>}
