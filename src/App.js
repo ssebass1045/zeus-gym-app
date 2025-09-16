@@ -1,20 +1,18 @@
-// src/App.js
-
-import React, { useContext } from "react"; // <-- Asegúrate de que useContext esté importado
+import React, { useContext, useState } from "react"; // <-- Añadir useState al import
 import { BrowserRouter as Router, Route, Routes, Link } from "react-router-dom";
-import { DataProvider, DataContext } from './contexts/DataContext'; // <-- Asegúrate de que DataContext esté importado
+import { DataProvider, DataContext } from './contexts/DataContext';
 import Dashboard from "./pages/Dashboard";
 import Users from "./pages/Users";
 import Payments from "./pages/Payments";
 import BodyComposition from "./pages/BodyComposition";
 import Attendance from "./pages/Attendance";
 import UserProfile from "./pages/UserProfile";
-import LoginPage from "./pages/LoginPage"; // <-- Importar LoginPage
+import LoginPage from "./pages/LoginPage";
 import "./App.css";
 
-// El componente App ahora leerá el contexto para decidir qué mostrar
 function App() {
-  const { currentUser, loading, logout } = useContext(DataContext); // <-- Obtener el estado de autenticación
+  const { currentUser, loading, logout } = useContext(DataContext);
+  const [isMenuOpen, setIsMenuOpen] = useState(false); // <-- Mover useState aquí, al inicio
 
   // 1. Mientras se verifica si el usuario está autenticado, mostramos un mensaje de carga
   if (loading) {
@@ -35,8 +33,6 @@ function App() {
       </Router>
     );
   }
-
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   // 3. Si hay un usuario autenticado, mostramos la aplicación principal
   return (
@@ -84,7 +80,6 @@ function App() {
               <Route path="/payments" element={<Payments />} />
               <Route path="/body-composition" element={<BodyComposition />} />
               <Route path="/attendance" element={<Attendance />} />
-              {/* Opcional: redirigir cualquier ruta desconocida al dashboard */}
               <Route path="*" element={<Dashboard />} />
             </Routes>
           </div>
@@ -100,8 +95,6 @@ function App() {
   );
 }
 
-// El componente que exportamos ahora es uno que envuelve App con DataProvider
-// Esto asegura que App pueda usar el contexto.
 const AppWrapper = () => (
   <DataProvider>
     <App />
