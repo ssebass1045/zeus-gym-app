@@ -1,8 +1,6 @@
-/* src/pages/UserProfile.js */
 import React, { useContext, useState, useEffect } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { DataContext } from '../contexts/DataContext';
-// --- RUTAS CORREGIDAS ---
 import PaymentHistory from '../components/PaymentHistory';
 import BodyComposition from '../components/BodyComposition';
 import AttendanceControl from '../components/AttendanceControl';
@@ -13,30 +11,20 @@ const UserProfile = () => {
   const { users, updateUser } = useContext(DataContext);
   const navigate = useNavigate();
 
-  const user = users.find(u => String(u.id) === id); // <-- Cambio sugerido en UserProfile.js
-
-
-  // --- NUEVOS ESTADOS PARA EDICIÓN ---
+  const user = users.find(u => String(u.id) === id);
   const [isEditing, setIsEditing] = useState(false);
   const [editableUser, setEditableUser] = useState({});
-  // --- FIN NUEVOS ESTADOS ---
 
-  // Cargar los datos del usuario en editableUser cuando el componente se monta o el usuario cambia
   useEffect(() => {
     if (user) {
       setEditableUser({ ...user });
     }
-  }, [user]); // Dependencia en 'user' para recargar si el usuario cambia (aunque no debería en esta página)
+  }, [user]);
 
   if (!user) {
     return <div className="alert alert-danger">Usuario no encontrado.</div>;
   }
 
-    if (!user) {
-    return <div className="alert alert-danger">Usuario no encontrado.</div>;
-  }
-
-  // --- FUNCIONES PARA MANEJAR LA EDICIÓN ---
   const handleEditChange = (e) => {
     const { name, value } = e.target;
     setEditableUser(prev => ({
@@ -45,9 +33,8 @@ const UserProfile = () => {
     }));
   };
 
-  // --- NUEVA FUNCIÓN: calculateDueDate ---
   const calculateDueDate = (plan, startDate) => {
-    if (!startDate) return null; // Si no hay fecha de inicio, no hay fecha de vencimiento
+    if (!startDate) return null;
     const date = new Date(startDate);
     if (plan === "Quincena") {
       date.setDate(date.getDate() + 15);
@@ -56,10 +43,8 @@ const UserProfile = () => {
     } 
     return date.toISOString().split("T")[0];
   };
-  // --- FIN NUEVA FUNCIÓN ---
 
   const handleSave = () => {
-    // Recalcular IMC si peso o altura han cambiado
     const calculateIMC = (weight, height) => {
       if (!weight || !height) return 0;
       const heightInMeters = height / 100;
@@ -83,7 +68,6 @@ const UserProfile = () => {
       updatedIMCCategory = getIMCCategory(updatedIMC);
     }
 
-    // Recalcular deuda si plan o pagoRealizado han cambiado
     const planPrices = {
       Quincena: 40000,
       Mensualidad: 80000,
@@ -92,33 +76,69 @@ const UserProfile = () => {
     const costoPlan = planPrices[editableUser.plan] || 0;
     const updatedDebe = costoPlan - parseFloat(editableUser.pagoRealizado || 0);
 
-    // --- NUEVO: Recalcular fechaVencimiento si el plan o la fecha de ingreso cambian ---
     let updatedFechaVencimiento = editableUser.fechaVencimiento;
     if (editableUser.plan !== user.plan || editableUser.fechaIngreso !== user.fechaIngreso) {
       updatedFechaVencimiento = calculateDueDate(editableUser.plan, editableUser.fechaIngreso);
     }
-    // --- FIN NUEVO ---
 
-    // Actualizar el usuario en el contexto
     updateUser({
       ...editableUser,
       imc: updatedIMC,
       imcCategory: updatedIMCCategory,
-      precioPlan: costoPlan, // Asegurarse de que el precio del plan se actualice
+      precioPlan: costoPlan,
       debe: updatedDebe,
-      fechaVencimiento: updatedFechaVencimiento, // Actualizar fechaVencimiento
+      fechaVencimiento: updatedFechaVencimiento,
     });
-    setIsEditing(false); // Salir del modo edición
+    setIsEditing(false);
     alert("Información del usuario actualizada correctamente.");
   };
 
   const handleCancel = () => {
-    setEditableUser({ ...user }); // Revertir cambios
-    setIsEditing(false); // Salir del modo edición
+    setEditableUser({ ...user });
+    setIsEditing(false);
   };
-  // --- FIN FUNCIONES PARA MANEJAR LA EDICIÓN ---
 
+  const handleRenewMembership = () => {
+    const planPrices = {
+      Quincena: 40000,
+      Mensualidad: 80000,
+      Tiquetera: 50000,
+    };
 
+    const precioPlan = planPrices[editableUser.plan];
+    const pago = parseFloat(prompt(`Ingrese el monto del pago para renovar (Precio del plan: $${precioPlan.toLocaleString()})`));
+    
+    if (pago === null || isNaN(pago)) return;
+
+    const updatedUser = { ...editableUser };
+    const today = new Date().toISOString().split('T')[0];
+    
+    updatedUser.fechaIngreso = today;
+    updatedUser.fechaVencimiento = calculateDueDate(updatedUser.plan, today);
+    updatedUser.pagoRealizado = pago;
+    updatedUser.precioPlan = precioPlan;
+    updatedUser.debe = Math.max(0, precioPlan - pago);
+    
+    const nuevoPago = {
+      fecha: today,
+      monto: pago,
+      tipo: "Renovación",
+      plan: updatedUser.plan
+    };
+    
+    updatedUser.historialPagos = [
+      ...(updatedUser.historialPagos || []),
+      nuevoPago
+    ];
+
+    if (updatedUser.plan === 'Tiquetera') {
+      updatedUser.diasHabiles = 0;
+    }
+
+    updateUser(updatedUser);
+    setEditableUser(updatedUser);
+    alert('Membresía renovada correctamente.');
+  };
 
   const getStatus = () => {
     const today = new Date();
@@ -135,12 +155,11 @@ const UserProfile = () => {
 
   return (
     <div className="user-profile-page">
-            <div className="profile-header">
+      <div className="profile-header">
         <div>
           <h1>{user.nombre}</h1>
           {getStatus()}
-          {/* --- BOTONES DE EDICIÓN --- */}
-          <div style={{ marginTop: '15px' }}> {/* Contenedor para los botones */}
+          <div style={{ marginTop: '15px' }}>
             {!isEditing ? (
               <button className="btn btn-primary" onClick={() => setIsEditing(true)}>
                 Editar Perfil
@@ -156,14 +175,12 @@ const UserProfile = () => {
               </>
             )}
           </div>
-          {/* --- FIN BOTONES DE EDICIÓN --- */}
         </div>
         <Link to="/users" className="back-link">← Volver a Usuarios</Link>
       </div>
 
-
       <div className="profile-grid">
-                <div className="profile-card">
+        <div className="profile-card">
           <h3>Información Personal</h3>
           {isEditing ? (
             <>
@@ -197,7 +214,7 @@ const UserProfile = () => {
             </>
           ) : (
             <>
-              <p><strong>Nombre:</strong> {user.nombre}</p> {/* Añadido para que se vea el nombre en modo visualización */}
+              <p><strong>Nombre:</strong> {user.nombre}</p>
               <p><strong>Teléfono:</strong> {user.telefono}</p>
               <p><strong>Dirección:</strong> {user.direccion}</p>
               <p><strong>Género:</strong> {user.genero}</p>
@@ -207,8 +224,7 @@ const UserProfile = () => {
           )}
         </div>
 
-
-                <div className="profile-card">
+        <div className="profile-card">
           <h3>Plan y Pagos</h3>
           {isEditing ? (
             <>
@@ -228,7 +244,6 @@ const UserProfile = () => {
                 <label>Pago Realizado:</label>
                 <input type="number" name="pagoRealizado" value={editableUser.pagoRealizado} onChange={handleEditChange} min="0" />
               </div>
-              {/* Estos campos se recalculan, no se editan directamente */}
               <p><strong>Precio del Plan:</strong> ${editableUser.precioPlan ? editableUser.precioPlan.toLocaleString() : 'N/A'}</p>
               <p><strong>Fecha de Vencimiento:</strong> {editableUser.fechaVencimiento || 'N/A (Tiquetera)'}</p>
               <p><strong>Deuda Pendiente:</strong> <span className="debt">${editableUser.debe ? editableUser.debe.toLocaleString() : 'N/A'}</span></p>
@@ -241,12 +256,14 @@ const UserProfile = () => {
               <p><strong>Fecha de Vencimiento:</strong> {user.fechaVencimiento || 'N/A (Tiquetera)'}</p>
               <p><strong>Pago Realizado:</strong> ${user.pagoRealizado ? user.pagoRealizado.toLocaleString() : 'N/A'}</p>
               <p><strong>Deuda Pendiente:</strong> <span className="debt">${user.debe ? user.debe.toLocaleString() : 'N/A'}</span></p>
+              <button onClick={handleRenewMembership} className="btn btn-success" style={{ marginTop: '15px' }}>
+                Renovar Membresía
+              </button>
             </>
           )}
         </div>
 
-
-                <div className="profile-card">
+        <div className="profile-card">
           <h3>Métricas de Salud</h3>
           {isEditing ? (
             <>
@@ -258,7 +275,6 @@ const UserProfile = () => {
                 <label>Altura (cm):</label>
                 <input type="number" name="altura" value={editableUser.altura} onChange={handleEditChange} step="0.1" min="0" />
               </div>
-              {/* IMC y Categoría IMC se mostrarán pero no se editan directamente */}
               <p><strong>IMC:</strong> {editableUser.imc || 'N/A'}</p>
               <p><strong>Categoría IMC:</strong> {editableUser.imcCategory || 'N/A'}</p>
             </>
@@ -271,13 +287,11 @@ const UserProfile = () => {
             </>
           )}
         </div>
-
       </div>
 
       <div className="profile-sections">
         <PaymentHistory userId={user.id} />
         <BodyComposition userId={user.id} gender={user.genero} />
-        
         {user.plan === 'Tiquetera' && (
           <AttendanceControl userId={user.id} />
         )}

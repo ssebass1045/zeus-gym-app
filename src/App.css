@@ -232,3 +232,131 @@ h1, h2, h3, h5, h6 {
   background-color: #4a4a4a; /* Un color ligeramente más claro para el hover */
 }
 
+
+
+
+
+
+
+
+
+/* ... existing code ... */
+
+/* Mejoras responsive para tablas */
+@media (max-width: 768px) {
+  .table {
+    font-size: 14px;
+  }
+
+  .table th, .table td {
+    padding: 0.4rem;
+  }
+
+  /* Hacer tablas scrollables horizontalmente */
+  .table-container {
+    overflow-x: auto;
+    margin-bottom: 1rem;
+  }
+
+  .table {
+    min-width: 600px; /* Ancho mínimo para mantener legibilidad */
+  }
+}
+
+/* Para tablas muy grandes en móviles */
+@media (max-width: 480px) {
+  .table {
+    font-size: 12px;
+  }
+
+  .table th, .table td {
+    padding: 0.3rem;
+  }
+}
+
+
+
+
+
+
+
+/* ... existing code ... */
+
+/* Mejoras responsive para formularios */
+@media (max-width: 768px) {
+  .form-group input, 
+  .form-group select, 
+  .form-group textarea {
+    font-size: 16px; /* Previene zoom en iOS */
+  }
+
+  .btn {
+    width: 100%;
+    margin-bottom: 0.5rem;
+  }
+
+  /* Botones en línea en formularios */
+  .form-buttons {
+    flex-direction: column;
+  }
+
+  .form-buttons .btn {
+    margin-right: 0;
+    margin-bottom: 0.5rem;
+  }
+}
+
+
+
+
+
+
+
+/* ... existing code ... */
+
+/* Mejoras responsive para navegación */
+@media (max-width: 768px) {
+  .header {
+    padding: 0.5rem;
+  }
+
+  .nav-links {
+    gap: 0.5rem;
+  }
+
+  .nav-links a {
+    padding: 0.4rem 0.6rem;
+    font-size: 0.9rem;
+  }
+
+  /* Menú hamburguesa opcional */
+  .mobile-menu-button {
+    display: block;
+    background: none;
+    border: none;
+    color: white;
+    font-size: 1.5rem;
+    cursor: pointer;
+  }
+
+  .nav-links {
+    display: none;
+    flex-direction: column;
+    width: 100%;
+  }
+
+  .nav-links.show {
+    display: flex;
+  }
+}
+
+@media (max-width: 480px) {
+  .header h1 {
+    font-size: 1.5rem;
+  }
+
+  .nav-links a {
+    font-size: 0.8rem;
+    padding: 0.3rem 0.5rem;
+  }
+}

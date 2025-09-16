@@ -1,82 +1,202 @@
-/* src/components/PaymentHistory.js */
-import React, { useState, useContext } from 'react';
+import React, { useContext, useState } from 'react';
 import { DataContext } from '../contexts/DataContext';
 import './PaymentHistory.css';
 
 const PaymentHistory = ({ userId }) => {
   const { users, updateUser } = useContext(DataContext);
   const user = users.find(u => u.id === userId);
+  const [showAddPayment, setShowAddPayment] = useState(false);
+  const [newPayment, setNewPayment] = useState({
+    monto: '',
+    tipo: 'Pago adicional',
+    fecha: new Date().toISOString().split('T')[0]
+  });
 
-  const [paymentAmount, setPaymentAmount] = useState('');
-
-  if (!user) {
-    return <p>Usuario no encontrado para el historial de pagos.</p>;
-  }
-
-  const handleAddPayment = (e) => {
-    e.preventDefault();
-    const amount = parseFloat(paymentAmount);
-
-    if (isNaN(amount) || amount <= 0) {
-      alert('Por favor, ingresa un monto de pago válido.');
+  const handleNewPayment = () => {
+    if (!newPayment.monto || isNaN(parseFloat(newPayment.monto))) {
+      alert('Por favor ingrese un monto válido');
       return;
     }
 
-    const newPayment = {
-      id: Date.now(),
-      amount: amount,
-      date: new Date().toISOString().substr(0, 10),
+    const monto = parseFloat(newPayment.monto);
+    const planPrices = {
+      Quincena: 40000,
+      Mensualidad: 80000,
+      Tiquetera: 50000,
     };
 
     const updatedUser = { ...user };
-    updatedUser.pagos = [...(updatedUser.pagos || []), newPayment];
-    updatedUser.debe = Math.max(0, updatedUser.debe - amount); // Asegura que no sea negativo
-    updatedUser.historialPagos = [...(updatedUser.historialPagos || []), {
-      fecha: new Date().toISOString().substr(0, 10), // Usar 'fecha' para consistencia
-      monto: amount, // Usar 'monto' para consistencia
-      tipo: "Pago Adicional", // Puedes especificar un tipo si lo deseas
-      id: Date.now(), // Añadir un ID único para el pago
-    }];
-
-    // Recalcular el pago realizado total sumando todos los montos en historialPagos
-    updatedUser.pagoRealizado = updatedUser.historialPagos.reduce((sum, p) => sum + p.monto, 0);
-
-    // Recalcular la deuda pendiente
-    updatedUser.debe = Math.max(0, (user.precioPlan || 0) - updatedUser.pagoRealizado);
+    const precioPlan = planPrices[updatedUser.plan] || 0;
+    
+    // Actualizar pagos
+    updatedUser.pagoRealizado = (updatedUser.pagoRealizado || 0) + monto;
+    updatedUser.debe = Math.max(0, precioPlan - updatedUser.pagoRealizado);
+    
+    // Agregar al historial de pagos
+    const nuevoPago = {
+      fecha: newPayment.fecha,
+      monto: monto,
+      tipo: newPayment.tipo,
+      plan: updatedUser.plan
+    };
+    
+    updatedUser.historialPagos = [
+      ...(updatedUser.historialPagos || []),
+      nuevoPago
+    ];
 
     updateUser(updatedUser);
-    setPaymentAmount('');
+    setShowAddPayment(false);
+    setNewPayment({
+      monto: '',
+      tipo: 'Pago adicional',
+      fecha: new Date().toISOString().split('T')[0]
+    });
+    alert('Pago registrado correctamente.');
   };
+
+  // Función para calcular total pagado
+  const getTotalPagado = () => {
+    if (!user.historialPagos) return 0;
+    return user.historialPagos.reduce((total, pago) => total + (pago.monto || 0), 0);
+  };
+
+  if (!user.historialPagos || user.historialPagos.length === 0) {
+    return (
+      <div className="payment-history-card">
+        <h3>Historial de Pagos</h3>
+        <p>No hay pagos registrados.</p>
+        <button onClick={() => setShowAddPayment(true)} className="btn btn-primary">
+          Registrar Nuevo Pago
+        </button>
+        
+        {showAddPayment && (
+          <div className="add-payment-form">
+            <h4>Registrar Nuevo Pago</h4>
+            <div className="form-group">
+              <label>Monto:</label>
+              <input
+                type="number"
+                value={newPayment.monto}
+                onChange={(e) => setNewPayment({...newPayment, monto: e.target.value})}
+                placeholder="Monto del pago"
+              />
+            </div>
+            <div className="form-group">
+              <label>Tipo:</label>
+              <select
+                value={newPayment.tipo}
+                onChange={(e) => setNewPayment({...newPayment, tipo: e.target.value})}
+              >
+                <option value="Pago adicional">Pago adicional</option>
+                <option value="Renovación">Renovación</option>
+                <option value="Abono">Abono</option>
+                <option value="Inicial">Pago inicial</option>
+              </select>
+            </div>
+            <div className="form-group">
+              <label>Fecha:</label>
+              <input
+                type="date"
+                value={newPayment.fecha}
+                onChange={(e) => setNewPayment({...newPayment, fecha: e.target.value})}
+              />
+            </div>
+            <div className="form-buttons">
+              <button onClick={handleNewPayment} className="btn btn-success">
+                Guardar Pago
+              </button>
+              <button onClick={() => setShowAddPayment(false)} className="btn btn-danger">
+                Cancelar
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div className="payment-history-card">
       <h3>Historial de Pagos</h3>
-      <form onSubmit={handleAddPayment} className="payment-form">
-        <label htmlFor="paymentAmount">Registrar Nuevo Pago:</label>
-        <input
-          type="number"
-          id="paymentAmount"
-          value={paymentAmount}
-          onChange={(e) => setPaymentAmount(e.target.value)}
-          placeholder="Monto del pago"
-          required
-        />
-        <button type="submit">Registrar Pago</button>
-      </form>
-
-      <h4>Pagos Realizados:</h4>
-      {user.historialPagos && user.historialPagos.length > 0 ? (
-        <ul className="payment-list">
-           {user.historialPagos.map(payment => (
-              <li key={payment.id} className="payment-item"> {/* <-- Añadir key={payment.id} */}
-                <span>{payment.fecha}</span>
-                <span className="payment-amount">${payment.monto.toLocaleString()}</span>
-              </li>
-            ))}
-        </ul>
-      ) : (
-        <p className="no-payments">No hay pagos registrados para este usuario.</p>
+      
+      <div className="payment-summary">
+        <strong>Total Pagado: ${getTotalPagado().toLocaleString()}</strong>
+      </div>
+      
+      <button onClick={() => setShowAddPayment(true)} className="btn btn-primary">
+        Registrar Nuevo Pago
+      </button>
+      
+      {showAddPayment && (
+        <div className="add-payment-form">
+          <h4>Registrar Nuevo Pago</h4>
+          <div className="form-group">
+            <label>Monto:</label>
+            <input
+              type="number"
+              value={newPayment.monto}
+              onChange={(e) => setNewPayment({...newPayment, monto: e.target.value})}
+              placeholder="Monto del pago"
+            />
+          </div>
+          <div className="form-group">
+            <label>Tipo:</label>
+            <select
+              value={newPayment.tipo}
+              onChange={(e) => setNewPayment({...newPayment, tipo: e.target.value})}
+            >
+              <option value="Pago adicional">Pago adicional</option>
+              <option value="Renovación">Renovación</option>
+              <option value="Abono">Abono</option>
+              <option value="Inicial">Pago inicial</option>
+            </select>
+          </div>
+          <div className="form-group">
+            <label>Fecha:</label>
+            <input
+              type="date"
+              value={newPayment.fecha}
+              onChange={(e) => setNewPayment({...newPayment, fecha: e.target.value})}
+            />
+          </div>
+          <div className="form-buttons">
+            <button onClick={handleNewPayment} className="btn btn-success">
+              Guardar Pago
+            </button>
+            <button onClick={() => setShowAddPayment(false)} className="btn btn-danger">
+              Cancelar
+            </button>
+          </div>
+        </div>
       )}
+
+      <div className="payment-list">
+        <h4>Últimos Pagos</h4>
+        <table className="payment-table">
+          <thead>
+            <tr>
+              <th>Fecha</th>
+              <th>Monto</th>
+              <th>Tipo</th>
+              <th>Plan</th>
+            </tr>
+          </thead>
+          <tbody>
+            {user.historialPagos
+              .sort((a, b) => new Date(b.fecha) - new Date(a.fecha))
+              .slice(0, 10)
+              .map((pago, index) => (
+                <tr key={index}>
+                  <td>{pago.fecha}</td>
+                  <td>${pago.monto?.toLocaleString() || '0'}</td>
+                  <td>{pago.tipo}</td>
+                  <td>{pago.plan || user.plan}</td>
+                </tr>
+              ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 };

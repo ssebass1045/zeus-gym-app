@@ -36,14 +36,22 @@ function App() {
     );
   }
 
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+
   // 3. Si hay un usuario autenticado, mostramos la aplicación principal
   return (
     <Router>
       <div className="app">
         <header className="header">
           <h1>ZEUS GYM</h1>
+          <button 
+            className="mobile-menu-button"
+            onClick={() => setIsMenuOpen(!isMenuOpen)}
+          >
+            ☰
+          </button>
           <nav>
-            <ul className="nav-links">
+            <ul className={`nav-links ${isMenuOpen ? 'show' : ''}`}>
               <li>
                 <Link to="/">Dashboard</Link>
               </li>

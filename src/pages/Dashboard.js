@@ -130,20 +130,30 @@ const getPlanDistribution = (users) => {
 
 const Dashboard = () => {
   const { users } = useContext(DataContext);
+  const [selectedMonth, setSelectedMonth] = useState(
+    new Date().toISOString().substr(0, 7) // Formato YYYY-MM
+  );
 
-  // --- NUEVOS ESTADOS PARA EL RANGO DE FECHAS ---
-  const [startDate, setStartDate] = useState('');
-  const [endDate, setEndDate] = useState('');
-  // --- FIN NUEVOS ESTADOS ---
+  // Función para obtener ingresos de un mes específico
+  const getMonthlyRevenue = (users, yearMonth) => {
+    const [year, month] = yearMonth.split('-').map(Number);
+    const firstDay = new Date(year, month - 1, 1);
+    const lastDay = new Date(year, month, 0);
+    
+    return getTotalRevenue(
+      users, 
+      firstDay.toISOString().split('T')[0], 
+      lastDay.toISOString().split('T')[0]
+    );
+  };
 
   // Calculate all metrics
   const totalUsers = users.length;
   const activeUsers = getActiveUsers(users).length;
-  const totalRevenue = getTotalRevenue(users, startDate, endDate);
+  const totalRevenue = getTotalRevenue(users);
+  const monthlyRevenue = getMonthlyRevenue(users, selectedMonth);
   const totalDebt = getTotalDebt(users);
-  // --- NUEVO: Historial Mensual de Ingresos ---
   const monthlyRevenueHistory = getMonthlyRevenueHistory(users);
-  // --- FIN NUEVO ---
   const upcomingExpirations = getUpcomingExpirations(users);
   const expiredUsers = getExpiredUsers(users);
   const usersWithDebt = getUsersWithDebt(users);
@@ -153,33 +163,18 @@ const Dashboard = () => {
   return (
     <div className="dashboard-page">
       <h1>Dashboard ZEUS GYM</h1>
-      {/* --- NUEVOS SELECTORES DE FECHA PARA INGRESOS --- */}
-      <div className="date-range-selector card" style={{ marginBottom: '20px', padding: '15px' }}>
-        <h3>Filtrar Ingresos por Fecha</h3>
-        <div className="form-group" style={{ display: 'flex', gap: '15px', alignItems: 'center' }}>
-          <div>
-            <label htmlFor="startDate">Desde:</label>
-            <input
-              type="date"
-              id="startDate"
-              value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
-              className="form-control"
-            />
-          </div>
-          <div>
-            <label htmlFor="endDate">Hasta:</label>
-            <input
-              type="date"
-              id="endDate"
-              value={endDate}
-              onChange={(e) => setEndDate(e.target.value)}
-              className="form-control"
-            />
-          </div>
-        </div>
+      
+      {/* Selector de mes */}
+      <div className="month-selector card">
+        <h3>Seleccionar Mes para Ingresos</h3>
+        <input
+          type="month"
+          value={selectedMonth}
+          onChange={(e) => setSelectedMonth(e.target.value)}
+          className="form-control"
+          style={{ maxWidth: '200px' }}
+        />
       </div>
-      {/* --- FIN NUEVOS SELECTORES DE FECHA --- */}
       
       {/* Metrics Grid */}
       <div className="dashboard-grid">
@@ -194,6 +189,10 @@ const Dashboard = () => {
         <div className="metric-card">
           <h3>Ingresos Totales</h3>
           <span className="metric-value">${totalRevenue.toLocaleString()}</span>
+        </div>
+        <div className="metric-card">
+          <h3>Ingresos del Mes</h3>
+          <span className="metric-value">${monthlyRevenue.toLocaleString()}</span>
         </div>
         <div className="metric-card">
           <h3>Deudas Pendientes</h3>
