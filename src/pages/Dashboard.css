@@ -253,3 +253,218 @@
     padding: 0.6rem;
   }
 }
+
+/* Estilos para acordeones */
+.category-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid #ddd;
+  margin-bottom: 0.5rem;
+}
+
+.category-header h3,
+.category-header h4 {
+  margin: 0;
+  color: #00aaff;
+}
+
+.category-header:hover {
+  background-color: #f5f5f5;
+}
+
+.toggle-icon {
+  font-size: 1.2rem;
+  color: #666;
+  transition: transform 0.2s;
+}
+
+.category-content {
+  padding: 0.5rem 0;
+  animation: fadeIn 0.3s ease-in;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* Ajustes para los paneles con acordeones */
+.alerts-panel .alert-category,
+.birthdays-panel {
+  margin-bottom: 1.5rem;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  padding: 1rem;
+  background-color: #f9f9f9;
+}
+
+.alerts-panel .alert-category:last-child,
+.birthdays-panel:last-child {
+  margin-bottom: 0;
+}
+
+/* Asegurar que los encabezados dentro de acordeones tengan el estilo correcto */
+.alerts-panel .alert-category .category-header h4 {
+  color: #ffc107;
+}
+
+.birthdays-panel .category-header h3 {
+  color: #00aaff;
+  border-bottom: none;
+  margin-bottom: 0;
+}
+
+/* Estilos para gráficos */
+.bar-chart-container {
+  margin-top: 1.5rem;
+  padding: 1rem;
+  background-color: #f9f9f9;
+  border-radius: 8px;
+}
+
+.bar-chart-container h4 {
+  margin-top: 0;
+  color: #333;
+  margin-bottom: 1rem;
+}
+
+.bar-chart {
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+}
+
+.bar-item {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.bar-label {
+  width: 120px;
+  font-weight: bold;
+  color: #333;
+}
+
+.bar {
+  flex: 1;
+  height: 25px;
+  background-color: #e0e0e0;
+  border-radius: 4px;
+  overflow: hidden;
+  position: relative;
+}
+
+.bar-fill {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.5s ease;
+}
+
+.bar-value {
+  width: 40px;
+  text-align: right;
+  font-weight: bold;
+  color: #333;
+}
+
+/* Gráfico de líneas */
+.line-chart-container {
+  margin-top: 2rem;
+  padding: 1rem;
+  background-color: #f9f9f9;
+  border-radius: 8px;
+}
+
+.line-chart-container h4 {
+  margin-top: 0;
+  color: #333;
+  margin-bottom: 1rem;
+}
+
+.line-chart {
+  position: relative;
+  height: 200px;
+  width: 100%;
+  background-color: #fff;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  margin-bottom: 0.5rem;
+}
+
+.line {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background-color: #00aaff;
+  opacity: 0.3;
+}
+
+.line-point {
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  background-color: #00aaff;
+  border-radius: 50%;
+  transform: translate(-50%, 50%);
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+
+.line-point:hover {
+  transform: translate(-50%, 50%) scale(1.5);
+  z-index: 10;
+}
+
+.point-tooltip {
+  position: absolute;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: rgba(0, 0, 0, 0.8);
+  color: white;
+  padding: 0.5rem;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  white-space: nowrap;
+  opacity: 0;
+  transition: opacity 0.2s;
+  pointer-events: none;
+}
+
+.line-point:hover .point-tooltip {
+  opacity: 1;
+}
+
+.chart-labels {
+  display: flex;
+  justify-content: space-between;
+  color: #666;
+  font-size: 0.9rem;
+}
+
+/* Ajustes responsive para gráficos */
+@media (max-width: 768px) {
+  .bar-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.3rem;
+  }
+  
+  .bar-label {
+    width: 100%;
+  }
+  
+  .bar {
+    width: 100%;
+  }
+  
+  .line-chart {
+    height: 150px;
+  }
+}

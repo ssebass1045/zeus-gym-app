@@ -125,6 +125,16 @@ const getPlanDistribution = (users) => {
     }, { Quincena: 0, Mensualidad: 0, Tiquetera: 0 });
 };
 
+// Función para obtener color según el plan
+const getPlanColor = (plan) => {
+  switch(plan) {
+    case 'Quincena': return '#00aaff';
+    case 'Mensualidad': return '#28a745';
+    case 'Tiquetera': return '#ffc107';
+    default: return '#6c757d';
+  }
+};
+
 
 // --- The Main Dashboard Component ---
 
@@ -133,6 +143,21 @@ const Dashboard = () => {
   const [selectedMonth, setSelectedMonth] = useState(
     new Date().toISOString().substr(0, 7) // Formato YYYY-MM
   );
+  // Estados para controlar acordeones
+  const [expandedSections, setExpandedSections] = useState({
+    upcomingExpirations: true,
+    expiredUsers: true,
+    usersWithDebt: true,
+    upcomingBirthdays: true,
+    monthlyRevenue: true
+  });
+  
+  const toggleSection = (section) => {
+    setExpandedSections(prev => ({
+      ...prev,
+      [section]: !prev[section]
+    }));
+  };
 
   // Función para obtener ingresos de un mes específico
   const getMonthlyRevenue = (users, yearMonth) => {
@@ -203,89 +228,197 @@ const Dashboard = () => {
       {/* Alerts Panel */}
       <div className="alerts-panel">
         <h3>Sistema de Alertas</h3>
+        
+        {/* Próximos a Vencer */}
         <div className="alert-category">
-          <h4>Próximos a Vencer (5 días)</h4>
-          {upcomingExpirations.length > 0 ? upcomingExpirations.map(u => (
-            <div key={u.id} className="alert-item">
-              <Link to={`/users/${u.id}`} className="user-name">{u.nombre}</Link>
-              <span className="alert-detail">Vence: {u.fechaVencimiento}</span>
+          <div className="category-header" onClick={() => toggleSection('upcomingExpirations')}>
+            <h4>Próximos a Vencer (5 días)</h4>
+            <span className="toggle-icon">
+              {expandedSections.upcomingExpirations ? '▼' : '▶'}
+            </span>
+          </div>
+          {expandedSections.upcomingExpirations && (
+            <div className="category-content">
+              {upcomingExpirations.length > 0 ? upcomingExpirations.map(u => (
+                <div key={u.id} className="alert-item">
+                  <Link to={`/users/${u.id}`} className="user-name">{u.nombre}</Link>
+                  <span className="alert-detail">Vence: {u.fechaVencimiento}</span>
+                </div>
+              )) : <p className="no-alerts">Ningún usuario próximo a vencer.</p>}
             </div>
-          )) : <p className="no-alerts">Ningún usuario próximo a vencer.</p>}
+          )}
         </div>
+        
+        {/* Usuarios Vencidos */}
         <div className="alert-category">
-          <h4>Usuarios Vencidos</h4>
-          {expiredUsers.length > 0 ? expiredUsers.map(u => (
-            <div key={u.id} className="alert-item">
-              <Link to={`/users/${u.id}`} className="user-name">{u.nombre}</Link>
-              <span className="alert-detail">Venció: {u.fechaVencimiento}</span>
+          <div className="category-header" onClick={() => toggleSection('expiredUsers')}>
+            <h4>Usuarios Vencidos</h4>
+            <span className="toggle-icon">
+              {expandedSections.expiredUsers ? '▼' : '▶'}
+            </span>
+          </div>
+          {expandedSections.expiredUsers && (
+            <div className="category-content">
+              {expiredUsers.length > 0 ? expiredUsers.map(u => (
+                <div key={u.id} className="alert-item">
+                  <Link to={`/users/${u.id}`} className="user-name">{u.nombre}</Link>
+                  <span className="alert-detail">Venció: {u.fechaVencimiento}</span>
+                </div>
+              )) : <p className="no-alerts">Ningún usuario vencido.</p>}
             </div>
-          )) : <p className="no-alerts">Ningún usuario vencido.</p>}
+          )}
         </div>
+        
+        {/* Usuarios con Deuda */}
         <div className="alert-category">
-          <h4>Usuarios con Deuda</h4>
-          {usersWithDebt.length > 0 ? usersWithDebt.map(u => (
-            <div key={u.id} className="alert-item">
-              <Link to={`/users/${u.id}`} className="user-name">{u.nombre}</Link>
-              <span className="alert-detail">Debe: ${u.debe.toLocaleString()}</span>
+          <div className="category-header" onClick={() => toggleSection('usersWithDebt')}>
+            <h4>Usuarios con Deuda</h4>
+            <span className="toggle-icon">
+              {expandedSections.usersWithDebt ? '▼' : '▶'}
+            </span>
+          </div>
+          {expandedSections.usersWithDebt && (
+            <div className="category-content">
+              {usersWithDebt.length > 0 ? usersWithDebt.map(u => (
+                <div key={u.id} className="alert-item">
+                  <Link to={`/users/${u.id}`} className="user-name">{u.nombre}</Link>
+                  <span className="alert-detail">Debe: ${u.debe.toLocaleString()}</span>
+                </div>
+              )) : <p className="no-alerts">Ningún usuario con deudas.</p>}
             </div>
-          )) : <p className="no-alerts">Ningún usuario con deudas.</p>}
+          )}
         </div>
       </div>
 
       {/* Upcoming Birthdays */}
       <div className="birthdays-panel">
+        <div className="category-header" onClick={() => toggleSection('upcomingBirthdays')}>
           <h3>Próximos Cumpleaños (30 días)</h3>
-          {upcomingBirthdays.length > 0 ? upcomingBirthdays.map(u => (
-              <div key={u.id} className="birthday-item">
-                  <Link to={`/users/${u.id}`} className="user-name">{u.nombre}</Link>
-                  <span className="birthday-detail">Cumple: {u.cumpleanos}</span>
-              </div>
-          )) : <p className="no-birthdays">No hay cumpleaños próximos.</p>}
-      </div>
-
-      {/* Plan Distribution */}
-      <div className="plans-panel">
-          <h3>Distribución por Planes</h3>
-          <div className="plan-distribution">
-              <div className="plan-item">
-                  <span>{planDistribution.Quincena}</span>
-                  <p>Quincena</p>
-              </div>
-              <div className="plan-item">
-                  <span>{planDistribution.Mensualidad}</span>
-                  <p>Mensualidad</p>
-              </div>
-              <div className="plan-item">
-                  <span>{planDistribution.Tiquetera}</span>
-                  <p>Tiquetera</p>
-              </div>
+          <span className="toggle-icon">
+            {expandedSections.upcomingBirthdays ? '▼' : '▶'}
+          </span>
+        </div>
+        {expandedSections.upcomingBirthdays && (
+          <div className="category-content">
+            {upcomingBirthdays.length > 0 ? upcomingBirthdays.map(u => (
+                <div key={u.id} className="birthday-item">
+                    <Link to={`/users/${u.id}`} className="user-name">{u.nombre}</Link>
+                    <span className="birthday-detail">Cumple: {u.cumpleanos}</span>
+                </div>
+            )) : <p className="no-birthdays">No hay cumpleaños próximos.</p>}
           </div>
-
-          {/* --- NUEVO: Historial Mensual de Ingresos --- */}
-      <div className="monthly-revenue-panel alerts-panel"> {/* Reutilizamos la clase alerts-panel para estilos básicos */}
-        <h3>Historial Mensual de Ingresos</h3>
-        {monthlyRevenueHistory.length > 0 ? (
-          <table className="monthly-revenue-table table"> {/* Reutilizamos la clase table para estilos básicos */}
-            <thead>
-              <tr>
-                <th>Mes</th>
-                <th>Ingresos</th>
-              </tr>
-            </thead>
-            <tbody>
-              {monthlyRevenueHistory.map(data => (
-                <tr key={data.month}>
-                  <td>{data.month}</td>
-                  <td>${data.revenue.toLocaleString()}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        ) : (
-          <p className="no-records">No hay registros de ingresos mensuales.</p>
         )}
       </div>
-      {/* --- FIN NUEVO --- */}
+
+      {/* Plan Distribution with Chart */}
+      <div className="plans-panel">
+        <h3>Distribución por Planes</h3>
+        <div className="plan-distribution">
+          <div className="plan-item">
+            <span>{planDistribution.Quincena}</span>
+            <p>Quincena</p>
+          </div>
+          <div className="plan-item">
+            <span>{planDistribution.Mensualidad}</span>
+            <p>Mensualidad</p>
+          </div>
+          <div className="plan-item">
+            <span>{planDistribution.Tiquetera}</span>
+            <p>Tiquetera</p>
+          </div>
+        </div>
+        
+        {/* Gráfico de barras simple */}
+        <div className="bar-chart-container">
+          <h4>Visualización de Distribución</h4>
+          <div className="bar-chart">
+            {Object.entries(planDistribution).map(([plan, count]) => {
+              const maxCount = Math.max(...Object.values(planDistribution));
+              const percentage = maxCount > 0 ? (count / maxCount) * 100 : 0;
+              return (
+                <div key={plan} className="bar-item">
+                  <div className="bar-label">{plan}</div>
+                  <div className="bar">
+                    <div 
+                      className="bar-fill" 
+                      style={{ width: `${percentage}%`, backgroundColor: getPlanColor(plan) }}
+                    ></div>
+                  </div>
+                  <div className="bar-value">{count}</div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+
+      {/* Monthly Revenue History with Chart */}
+      <div className="monthly-revenue-panel alerts-panel">
+        <div className="category-header" onClick={() => toggleSection('monthlyRevenue')}>
+          <h3>Historial Mensual de Ingresos</h3>
+          <span className="toggle-icon">
+            {expandedSections.monthlyRevenue ? '▼' : '▶'}
+          </span>
+        </div>
+        {expandedSections.monthlyRevenue && (
+          <div className="category-content">
+            {monthlyRevenueHistory.length > 0 ? (
+              <>
+                <table className="monthly-revenue-table table">
+                  <thead>
+                    <tr>
+                      <th>Mes</th>
+                      <th>Ingresos</th>
+                      <th>Tendencia</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {monthlyRevenueHistory.map((data, index) => {
+                      const prevRevenue = index < monthlyRevenueHistory.length - 1 
+                        ? monthlyRevenueHistory[index + 1].revenue 
+                        : data.revenue;
+                      const trend = data.revenue > prevRevenue ? '📈' : data.revenue < prevRevenue ? '📉' : '➡️';
+                      return (
+                        <tr key={data.month}>
+                          <td>{data.month}</td>
+                          <td>${data.revenue.toLocaleString()}</td>
+                          <td>{trend}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+                
+                {/* Gráfico de líneas simple */}
+                <div className="line-chart-container">
+                  <h4>Evolución de Ingresos</h4>
+                  <div className="line-chart">
+                    {monthlyRevenueHistory.slice(0, 12).reverse().map((data, index, arr) => {
+                      const maxRevenue = Math.max(...arr.map(d => d.revenue));
+                      const minRevenue = Math.min(...arr.map(d => d.revenue));
+                      const range = maxRevenue - minRevenue;
+                      const percentage = range > 0 ? ((data.revenue - minRevenue) / range) * 100 : 50;
+                      return (
+                        <div key={data.month} className="line-point" style={{ left: `${(index / (arr.length - 1 || 1)) * 100}%`, bottom: `${percentage}%` }}>
+                          <div className="point-tooltip">
+                            {data.month}: ${data.revenue.toLocaleString()}
+                          </div>
+                        </div>
+                      );
+                    })}
+                    <div className="line"></div>
+                  </div>
+                  <div className="chart-labels">
+                    <span>Más antiguo</span>
+                    <span>Más reciente</span>
+                  </div>
+                </div>
+              </>
+            ) : (
+              <p className="no-records">No hay registros de ingresos mensuales.</p>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Backup Manager 

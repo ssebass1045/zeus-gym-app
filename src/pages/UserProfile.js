@@ -1,5 +1,5 @@
 import React, { useContext, useState, useEffect } from "react";
-import { useParams, Link, useNavigate } from "react-router-dom";
+import { useParams, Link } from "react-router-dom";
 import { DataContext } from '../contexts/DataContext';
 import PaymentHistory from '../components/PaymentHistory';
 import BodyComposition from '../components/BodyComposition';
@@ -9,15 +9,25 @@ import './UserProfile.css';
 const UserProfile = () => {
   const { id } = useParams();
   const { users, updateUser } = useContext(DataContext);
-  const navigate = useNavigate();
 
   const user = users.find(u => String(u.id) === id);
   const [isEditing, setIsEditing] = useState(false);
   const [editableUser, setEditableUser] = useState({});
+  const [showRenewModal, setShowRenewModal] = useState(false);
+  const [renewData, setRenewData] = useState({
+    plan: '',
+    fechaIngreso: new Date().toISOString().split('T')[0],
+    pago: '',
+    notas: ''
+  });
 
   useEffect(() => {
     if (user) {
       setEditableUser({ ...user });
+      setRenewData(prev => ({
+        ...prev,
+        plan: user.plan
+      }));
     }
   }, [user]);
 
@@ -99,31 +109,47 @@ const UserProfile = () => {
   };
 
   const handleRenewMembership = () => {
+    setRenewData({
+      plan: user.plan,
+      fechaIngreso: new Date().toISOString().split('T')[0],
+      pago: '',
+      notas: ''
+    });
+    setShowRenewModal(true);
+  };
+
+  const handleRenewSubmit = () => {
     const planPrices = {
       Quincena: 40000,
       Mensualidad: 80000,
       Tiquetera: 50000,
     };
 
-    const precioPlan = planPrices[editableUser.plan];
-    const pago = parseFloat(prompt(`Ingrese el monto del pago para renovar (Precio del plan: $${precioPlan.toLocaleString()})`));
+    const precioPlan = planPrices[renewData.plan];
+    const pago = parseFloat(renewData.pago);
     
-    if (pago === null || isNaN(pago)) return;
+    if (isNaN(pago) || pago <= 0) {
+      alert('Por favor ingrese un monto válido para el pago.');
+      return;
+    }
 
     const updatedUser = { ...editableUser };
-    const today = new Date().toISOString().split('T')[0];
     
-    updatedUser.fechaIngreso = today;
-    updatedUser.fechaVencimiento = calculateDueDate(updatedUser.plan, today);
+    // Actualizar datos del usuario
+    updatedUser.plan = renewData.plan;
+    updatedUser.fechaIngreso = renewData.fechaIngreso;
+    updatedUser.fechaVencimiento = calculateDueDate(renewData.plan, renewData.fechaIngreso);
     updatedUser.pagoRealizado = pago;
     updatedUser.precioPlan = precioPlan;
     updatedUser.debe = Math.max(0, precioPlan - pago);
     
+    // Agregar al historial de pagos
     const nuevoPago = {
-      fecha: today,
+      fecha: renewData.fechaIngreso,
       monto: pago,
       tipo: "Renovación",
-      plan: updatedUser.plan
+      plan: renewData.plan,
+      notas: renewData.notas
     };
     
     updatedUser.historialPagos = [
@@ -137,7 +163,20 @@ const UserProfile = () => {
 
     updateUser(updatedUser);
     setEditableUser(updatedUser);
-    alert('Membresía renovada correctamente.');
+    setShowRenewModal(false);
+    alert('Membresía renovada correctamente. El pago se ha registrado en el historial.');
+  };
+
+  const handleRenewCancel = () => {
+    setShowRenewModal(false);
+  };
+
+  const handleRenewChange = (e) => {
+    const { name, value } = e.target;
+    setRenewData(prev => ({
+      ...prev,
+      [name]: value
+    }));
   };
 
   const getStatus = () => {
@@ -296,6 +335,39 @@ const UserProfile = () => {
           <AttendanceControl userId={user.id} />
         )}
       </div>
+
+      {/* Modal de Renovación de Membresía */}
+      {showRenewModal && (
+        <div className="modal-overlay">
+          <div className="modal-content">
+            <h3>Renovar Membresía</h3>
+            <div className="form-group">
+              <label>Plan:</label>
+              <select name="plan" value={renewData.plan} onChange={handleRenewChange}>
+                <option value="Quincena">Quincena ($40,000)</option>
+                <option value="Mensualidad">Mensualidad ($80,000)</option>
+                <option value="Tiquetera">Tiquetera ($50,000)</option>
+              </select>
+            </div>
+            <div className="form-group">
+              <label>Fecha de Ingreso:</label>
+              <input type="date" name="fechaIngreso" value={renewData.fechaIngreso} onChange={handleRenewChange} />
+            </div>
+            <div className="form-group">
+              <label>Monto del Pago:</label>
+              <input type="number" name="pago" value={renewData.pago} onChange={handleRenewChange} placeholder="Ej: 80000" min="0" />
+            </div>
+            <div className="form-group">
+              <label>Notas (opcional):</label>
+              <textarea name="notas" value={renewData.notas} onChange={handleRenewChange} placeholder="Observaciones sobre el pago"></textarea>
+            </div>
+            <div className="modal-actions">
+              <button className="btn btn-success" onClick={handleRenewSubmit}>Confirmar Renovación</button>
+              <button className="btn btn-danger" onClick={handleRenewCancel}>Cancelar</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

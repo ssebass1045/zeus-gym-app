@@ -90,3 +90,317 @@
   color: #ffffff;
   font-style: italic;
 }
+
+/* Controles */
+.comp-controls {
+  margin-bottom: 1rem;
+}
+
+.toggle-btn {
+  background-color: #00aaff;
+  color: white;
+  padding: 0.5rem 1rem;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: background-color 0.3s;
+}
+
+.toggle-btn:hover {
+  background-color: #0077cc;
+}
+
+.toggle-btn.active {
+  background-color: #28a745;
+}
+
+/* Sección de gráficos */
+.comp-chart-section {
+  margin: 1.5rem 0;
+  padding: 1rem;
+  background-color: #2a2a2a;
+  border-radius: 8px;
+}
+
+.comp-chart-section h4 {
+  margin-top: 0;
+  color: #00aaff;
+  margin-bottom: 1rem;
+}
+
+.chart-controls {
+  margin-bottom: 1rem;
+}
+
+.chart-controls select {
+  padding: 0.5rem;
+  border-radius: 5px;
+  border: 1px solid #555;
+  background-color: #333;
+  color: #e0e0e0;
+  width: 100%;
+  max-width: 300px;
+}
+
+/* Gráfico de líneas */
+.line-chart-comp {
+  margin-top: 1rem;
+}
+
+.chart-container {
+  position: relative;
+  height: 200px;
+  width: 100%;
+  background-color: #1e1e1e;
+  border: 1px solid #444;
+  border-radius: 4px;
+  margin-bottom: 0.5rem;
+}
+
+.chart-line {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background-color: #00aaff;
+  opacity: 0.3;
+}
+
+.chart-point {
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  background-color: #00aaff;
+  border-radius: 50%;
+  transform: translate(-50%, 50%);
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+
+.chart-point:hover {
+  transform: translate(-50%, 50%) scale(1.5);
+  z-index: 10;
+}
+
+.point-value {
+  position: absolute;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: rgba(0, 0, 0, 0.8);
+  color: white;
+  padding: 0.3rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  white-space: nowrap;
+  opacity: 0;
+  transition: opacity 0.2s;
+  pointer-events: none;
+}
+
+.point-date {
+  position: absolute;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  color: #aaa;
+  font-size: 0.7rem;
+  white-space: nowrap;
+  opacity: 0;
+  transition: opacity 0.2s;
+  pointer-events: none;
+}
+
+.chart-point:hover .point-value,
+.chart-point:hover .point-date {
+  opacity: 1;
+}
+
+.chart-axis {
+  display: flex;
+  justify-content: space-between;
+  color: #666;
+  font-size: 0.8rem;
+}
+
+.no-chart-data {
+  color: #aaa;
+  font-style: italic;
+  text-align: center;
+  padding: 1rem;
+}
+
+/* Representación corporal */
+.body-representation {
+  margin: 1.5rem 0;
+  padding: 1rem;
+  background-color: #2a2a2a;
+  border-radius: 8px;
+}
+
+.body-representation h4 {
+  margin-top: 0;
+  color: #00aaff;
+  margin-bottom: 1rem;
+}
+
+.body-visual {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2rem;
+  align-items: center;
+}
+
+.body-figure {
+  position: relative;
+  width: 150px;
+  height: 300px;
+  margin: 0 auto;
+}
+
+.body-part {
+  position: absolute;
+  background-color: #00aaff;
+  border-radius: 4px;
+}
+
+/* Cabeza */
+.head {
+  width: 60px;
+  height: 60px;
+  top: 0;
+  left: 45px;
+  border-radius: 50%;
+}
+
+/* Torso */
+.torso {
+  width: 80px;
+  height: 100px;
+  top: 60px;
+  left: 35px;
+}
+
+/* Brazos */
+.arm {
+  width: 20px;
+  height: 80px;
+  top: 70px;
+}
+
+.arm.left {
+  left: 15px;
+}
+
+.arm.right {
+  right: 15px;
+}
+
+/* Piernas */
+.leg {
+  width: 25px;
+  height: 100px;
+  top: 160px;
+}
+
+.leg.left {
+  left: 50px;
+}
+
+.leg.right {
+  right: 50px;
+}
+
+/* Variaciones según tipo de cuerpo */
+.body-figure.delgado .body-part {
+  background-color: #6c757d;
+  width: calc(100% - 20px);
+}
+
+.body-figure.obeso .body-part {
+  background-color: #dc3545;
+  width: calc(100% + 20px);
+  left: -10px;
+}
+
+.body-figure.musculoso .body-part {
+  background-color: #28a745;
+  width: calc(100% + 10px);
+  left: -5px;
+}
+
+/* Variaciones según género */
+.body-figure.femenino .torso {
+  border-radius: 50% 50% 20% 20%;
+}
+
+.body-figure.masculino .torso {
+  border-radius: 10%;
+}
+
+.body-info {
+  flex: 1;
+  min-width: 200px;
+}
+
+.body-info p {
+  margin: 0.5rem 0;
+}
+
+.body-info strong {
+  color: #00aaff;
+}
+
+.measurement-summary ul {
+  list-style: none;
+  padding: 0;
+  margin: 0.5rem 0;
+}
+
+.measurement-summary li {
+  padding: 0.2rem 0;
+  color: #e0e0e0;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .body-visual {
+    flex-direction: column;
+    text-align: center;
+  }
+  
+  .body-figure {
+    width: 120px;
+    height: 240px;
+  }
+  
+  .head {
+    width: 50px;
+    height: 50px;
+    left: 35px;
+  }
+  
+  .torso {
+    width: 70px;
+    height: 90px;
+    left: 25px;
+  }
+  
+  .arm {
+    height: 70px;
+  }
+  
+  .leg {
+    height: 90px;
+  }
+  
+  .leg.left {
+    left: 40px;
+  }
+  
+  .leg.right {
+    right: 40px;
+  }
+}
