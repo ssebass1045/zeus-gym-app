@@ -95,11 +95,17 @@ export const DataProvider = ({ children }) => {
       const userWithoutLocalId = { ...user };
       delete userWithoutLocalId.id;
 
-      const docRef = await addDoc(collection(db, "users"), userWithoutLocalId);
+      // Asegurar que el usuario tenga el campo deudasAdicionales inicializado
+      const userWithDefaults = {
+        ...userWithoutLocalId,
+        deudasAdicionales: userWithoutLocalId.deudasAdicionales || []
+      };
+
+      const docRef = await addDoc(collection(db, "users"), userWithDefaults);
       
       // ESTA ES LA LÍNEA CORRECTA
       // Combina el objeto original (sin el id numérico) con el nuevo id de Firestore
-      const finalUserForState = { ...userWithoutLocalId, id: docRef.id };
+      const finalUserForState = { ...userWithDefaults, id: docRef.id };
       setUsers(prevUsers => [...prevUsers, finalUserForState]);
 
       console.log("Usuario añadido con ID: ", docRef.id);

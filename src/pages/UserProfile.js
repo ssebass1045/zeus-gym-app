@@ -14,11 +14,19 @@ const UserProfile = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [editableUser, setEditableUser] = useState({});
   const [showRenewModal, setShowRenewModal] = useState(false);
+  const [showDebtModal, setShowDebtModal] = useState(false);
   const [renewData, setRenewData] = useState({
     plan: '',
     fechaIngreso: new Date().toISOString().split('T')[0],
     pago: '',
     notas: ''
+  });
+  const [newDebt, setNewDebt] = useState({
+    concepto: '',
+    monto: '',
+    fecha: new Date().toISOString().split('T')[0],
+    notas: '',
+    tipo: 'producto' // producto, servicio, otros
   });
 
   useEffect(() => {
@@ -179,6 +187,126 @@ const UserProfile = () => {
     }));
   };
 
+  // Funciones para manejar deudas adicionales
+  const handleAddDebt = () => {
+    setNewDebt({
+      concepto: '',
+      monto: '',
+      fecha: new Date().toISOString().split('T')[0],
+      notas: '',
+      tipo: 'producto'
+    });
+    setShowDebtModal(true);
+  };
+
+  const handleDebtChange = (e) => {
+    const { name, value } = e.target;
+    setNewDebt(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  const handleDebtSubmit = () => {
+    const monto = parseFloat(newDebt.monto);
+    if (!newDebt.concepto.trim() || isNaN(monto) || monto <= 0) {
+      alert('Por favor complete el concepto y un monto válido.');
+      return;
+    }
+
+    const updatedUser = { ...editableUser };
+    const nuevaDeuda = {
+      id: Date.now(),
+      concepto: newDebt.concepto,
+      monto: monto,
+      fecha: newDebt.fecha,
+      tipo: newDebt.tipo,
+      notas: newDebt.notas,
+      pagado: 0,
+      saldo: monto,
+      estado: 'pendiente'
+    };
+
+    updatedUser.deudasAdicionales = [
+      ...(updatedUser.deudasAdicionales || []),
+      nuevaDeuda
+    ];
+
+    updateUser(updatedUser);
+    setEditableUser(updatedUser);
+    setShowDebtModal(false);
+    alert('Deuda adicional registrada correctamente.');
+  };
+
+  const handleDebtCancel = () => {
+    setShowDebtModal(false);
+  };
+
+  const handlePayDebt = (deudaId, montoTotal) => {
+    const pago = prompt(`Ingrese el monto a pagar (Deuda total: $${montoTotal.toLocaleString()}):`);
+    const montoPago = parseFloat(pago);
+    
+    if (isNaN(montoPago) || montoPago <= 0) {
+      alert('Monto de pago inválido.');
+      return;
+    }
+
+    const updatedUser = { ...editableUser };
+    const deudas = updatedUser.deudasAdicionales || [];
+    const deudaIndex = deudas.findIndex(d => d.id === deudaId);
+    
+    if (deudaIndex === -1) return;
+
+    const deuda = deudas[deudaIndex];
+    const nuevoPagado = (deuda.pagado || 0) + montoPago;
+    const nuevoSaldo = Math.max(0, deuda.monto - nuevoPagado);
+    const nuevoEstado = nuevoSaldo === 0 ? 'pagado' : 'pendiente';
+
+    // Actualizar deuda
+    deudas[deudaIndex] = {
+      ...deuda,
+      pagado: nuevoPagado,
+      saldo: nuevoSaldo,
+      estado: nuevoEstado
+    };
+
+    // Agregar al historial de pagos
+    const nuevoPago = {
+      fecha: new Date().toISOString().split('T')[0],
+      monto: montoPago,
+      tipo: "Pago deuda adicional",
+      concepto: deuda.concepto,
+      notas: `Pago de deuda: ${deuda.concepto}`
+    };
+
+    updatedUser.historialPagos = [
+      ...(updatedUser.historialPagos || []),
+      nuevoPago
+    ];
+
+    updateUser(updatedUser);
+    setEditableUser(updatedUser);
+    alert(`Pago de $${montoPago.toLocaleString()} registrado correctamente.`);
+  };
+
+  const handleDeleteDebt = (deudaId) => {
+    if (!window.confirm('¿Está seguro de eliminar esta deuda? Esta acción no se puede deshacer.')) {
+      return;
+    }
+
+    const updatedUser = { ...editableUser };
+    updatedUser.deudasAdicionales = (updatedUser.deudasAdicionales || []).filter(d => d.id !== deudaId);
+    
+    updateUser(updatedUser);
+    setEditableUser(updatedUser);
+    alert('Deuda eliminada correctamente.');
+  };
+
+  // Calcular total de deudas adicionales
+  const totalDeudasAdicionales = (user.deudasAdicionales || []).reduce((total, deuda) => {
+    return total + (deuda.saldo || deuda.monto);
+  }, 0);
+
   const getStatus = () => {
     const today = new Date();
     const expirationDate = new Date(user.fechaVencimiento);
@@ -334,6 +462,95 @@ const UserProfile = () => {
         {user.plan === 'Tiquetera' && (
           <AttendanceControl userId={user.id} />
         )}
+        
+        {/* Sección de Deudas Adicionales */}
+        <div className="profile-card additional-debts-section">
+          <div className="section-header">
+            <h3>Deudas Adicionales</h3>
+            <button onClick={handleAddDebt} className="btn btn-primary">
+              + Agregar Deuda
+            </button>
+          </div>
+          
+          <div className="debt-summary">
+            <p>
+              <strong>Total de deudas adicionales:</strong> 
+              <span className="debt-total"> ${totalDeudasAdicionales.toLocaleString()}</span>
+            </p>
+            <p>
+              <strong>Total deuda general:</strong> 
+              <span className="debt-total"> ${(user.debe + totalDeudasAdicionales).toLocaleString()}</span>
+              (Plan: ${user.debe.toLocaleString()} + Adicionales: ${totalDeudasAdicionales.toLocaleString()})
+            </p>
+          </div>
+          
+          {(user.deudasAdicionales || []).length > 0 ? (
+            <div className="debts-table-container">
+              <table className="debts-table">
+                <thead>
+                  <tr>
+                    <th>Concepto</th>
+                    <th>Tipo</th>
+                    <th>Fecha</th>
+                    <th>Monto Total</th>
+                    <th>Pagado</th>
+                    <th>Saldo</th>
+                    <th>Estado</th>
+                    <th>Acciones</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {(user.deudasAdicionales || []).map(deuda => (
+                    <tr key={deuda.id} className={`debt-row ${deuda.estado}`}>
+                      <td>{deuda.concepto}</td>
+                      <td>
+                        <span className={`debt-type ${deuda.tipo}`}>
+                          {deuda.tipo}
+                        </span>
+                      </td>
+                      <td>{deuda.fecha}</td>
+                      <td>${deuda.monto.toLocaleString()}</td>
+                      <td>${(deuda.pagado || 0).toLocaleString()}</td>
+                      <td>
+                        <span className={`debt-balance ${deuda.saldo > 0 ? 'pending' : 'paid'}`}>
+                          ${(deuda.saldo || deuda.monto).toLocaleString()}
+                        </span>
+                      </td>
+                      <td>
+                        <span className={`debt-status ${deuda.estado}`}>
+                          {deuda.estado}
+                        </span>
+                      </td>
+                      <td>
+                        <div className="debt-actions">
+                          {deuda.saldo > 0 && (
+                            <button 
+                              onClick={() => handlePayDebt(deuda.id, deuda.saldo || deuda.monto)}
+                              className="btn btn-success btn-sm"
+                            >
+                              Pagar
+                            </button>
+                          )}
+                          <button 
+                            onClick={() => handleDeleteDebt(deuda.id)}
+                            className="btn btn-danger btn-sm"
+                          >
+                            Eliminar
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <div className="no-debts">
+              <p>No hay deudas adicionales registradas.</p>
+              <p>Puedes agregar deudas por productos fiados (proteínas, guantes, hidratación, etc.)</p>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Modal de Renovación de Membresía */}
@@ -364,6 +581,66 @@ const UserProfile = () => {
             <div className="modal-actions">
               <button className="btn btn-success" onClick={handleRenewSubmit}>Confirmar Renovación</button>
               <button className="btn btn-danger" onClick={handleRenewCancel}>Cancelar</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal para agregar deudas adicionales */}
+      {showDebtModal && (
+        <div className="modal-overlay">
+          <div className="modal-content">
+            <h3>Agregar Deuda Adicional</h3>
+            <div className="form-group">
+              <label>Concepto:</label>
+              <input 
+                type="text" 
+                name="concepto" 
+                value={newDebt.concepto} 
+                onChange={handleDebtChange} 
+                placeholder="Ej: Proteína, Guantes, Hidratación, etc."
+              />
+            </div>
+            <div className="form-group">
+              <label>Tipo:</label>
+              <select name="tipo" value={newDebt.tipo} onChange={handleDebtChange}>
+                <option value="producto">Producto</option>
+                <option value="servicio">Servicio</option>
+                <option value="otros">Otros</option>
+              </select>
+            </div>
+            <div className="form-group">
+              <label>Monto:</label>
+              <input 
+                type="number" 
+                name="monto" 
+                value={newDebt.monto} 
+                onChange={handleDebtChange} 
+                placeholder="Ej: 50000"
+                min="0"
+              />
+            </div>
+            <div className="form-group">
+              <label>Fecha:</label>
+              <input 
+                type="date" 
+                name="fecha" 
+                value={newDebt.fecha} 
+                onChange={handleDebtChange}
+              />
+            </div>
+            <div className="form-group">
+              <label>Notas (opcional):</label>
+              <textarea 
+                name="notas" 
+                value={newDebt.notas} 
+                onChange={handleDebtChange} 
+                placeholder="Observaciones sobre la deuda"
+              ></textarea>
+            </div>
+            <div className="modal-actions">
+              <button className="btn btn-success" onClick={handleDebtSubmit}>Guardar Deuda</button>
+              <button className="btn btn-danger" onClick={handleDebtCancel}>Cancelar</button>
             </div>
           </div>
         </div>

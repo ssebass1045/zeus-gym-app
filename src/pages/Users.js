@@ -1,9 +1,10 @@
 import React, { useState, useContext } from "react";
 import { DataContext } from "../contexts/DataContext";
 import { Link } from "react-router-dom";
+import "./Users.css";
 
 const Users = () => {
-  const { users, addUser, updateUser, deleteUser } = useContext(DataContext);
+  const { users, addUser, deleteUser } = useContext(DataContext);
   const [newUser, setNewUser] = useState({
     nombre: "",
     direccion: "",
@@ -19,7 +20,7 @@ const Users = () => {
   });
   const [showAddUserForm, setShowAddUserForm] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
-  const [sortConfig, setSortConfig] = useState({ key: null, direction: 'ascending' }); 
+  const [sortConfig, setSortConfig] = useState({ key: 'nombre', direction: 'ascending' }); 
 
   const handleInputChange = (e) => {
     setNewUser({ ...newUser, [e.target.name]: e.target.value });
@@ -169,44 +170,49 @@ const Users = () => {
     setSortConfig({ key, direction });
   };
 
+  // Función para obtener clase CSS para indicador de ordenamiento
+  const getSortClass = (key) => {
+    if (sortConfig.key !== key) return '';
+    return sortConfig.direction === 'ascending' ? 'ascending' : 'descending';
+  };
+
+  // Función para obtener estado del usuario
+  const getUserStatus = (user) => {
+    const today = new Date();
+    const expirationDate = new Date(user.fechaVencimiento);
+    
+    if (user.debe > 0) {
+      return <span className="status-badge status-debt">Con Deuda</span>;
+    }
+    if (user.plan !== 'Tiquetera' && expirationDate < today) {
+      return <span className="status-badge status-expired">Vencido</span>;
+    }
+    return <span className="status-badge status-active">Activo</span>;
+  };
+
   return (
     <div className="users">
       <h2>Gestión de Usuarios</h2>
 
-      {/* --- NUEVO: Campo de Búsqueda --- */}
-      <div className="search-bar card">
-        {" "}
-        {/* Usamos la clase 'card' para el estilo */}
+      {/* Campo de Búsqueda */}
+      <div className="search-bar">
         <input
           type="text"
           placeholder="Buscar usuarios por nombre, teléfono, dirección o plan..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
-          className="form-control" // Reutilizamos la clase de estilo de formulario
-          style={{
-            width: "100%",
-            padding: "10px",
-            borderRadius: "5px",
-            border: "1px solid #ddd",
-          }} // Estilos básicos
         />
       </div>
-      {/* --- FIN NUEVO --- */}
 
       <div className="add-user-section">
-        {" "}
-        {/* Contenedor para el botón y el formulario */}
         <button
           className="btn btn-primary"
           onClick={() => setShowAddUserForm(!showAddUserForm)}
-          style={{ marginBottom: "20px" }} // Puedes mover este estilo a App.css si lo prefieres
         >
           {showAddUserForm ? "Ocultar Formulario" : "Añadir Nuevo Usuario"}
         </button>
-        {showAddUserForm && ( // Esto renderiza el formulario SOLO si showAddUserForm es true
-          <div className="card add-user-form-container">
-            {" "}
-            {/* Añadimos 'card' para mantener el estilo */}
+        {showAddUserForm && (
+          <div className="add-user-form-container">
             <h3>Agregar Nuevo Usuario</h3>
             <form onSubmit={handleSubmit}>
               <div className="form-group">
@@ -331,43 +337,82 @@ const Users = () => {
         )}
       </div>
 
-      <div className="card">
-        <h3>Lista de Usuarios</h3>
+      <div className="users-table-container">
+        <h3>Lista de Usuarios ({sortedUsers.length})</h3>
         <table className="table">
           <thead>
             <tr>
-              <th onClick={() => requestSort('nombre')}>Nombre</th>
-              <th onClick={() => requestSort('plan')}>Plan</th>
-              <th onClick={() => requestSort('fechaVencimiento')}>Vencimiento</th>
-              <th onClick={() => requestSort('debe')}>Deuda</th>
+              <th 
+                className={getSortClass('nombre')}
+                onClick={() => requestSort('nombre')}
+              >
+                Nombre
+              </th>
+              <th 
+                className={getSortClass('plan')}
+                onClick={() => requestSort('plan')}
+              >
+                Plan
+              </th>
+              <th 
+                className={getSortClass('fechaVencimiento')}
+                onClick={() => requestSort('fechaVencimiento')}
+              >
+                Vencimiento
+              </th>
+              <th 
+                className={getSortClass('debe')}
+                onClick={() => requestSort('debe')}
+              >
+                Deuda
+              </th>
+              <th>Estado</th>
               <th>Acciones</th>
             </tr>
           </thead>
           <tbody>
             {sortedUsers.map((user) => (
               <tr key={user.id}>
-                <td>{user.nombre}</td>
-                <td>{user.plan}</td>
-                <td>{new Date(user.fechaVencimiento).toLocaleDateString()}</td>
-                <td>${user.debe.toLocaleString()}</td>
                 <td>
-                  <Link to={`/users/${user.id}`} className="btn btn-primary">
-                    Ver Perfil
-                  </Link>
-                  {/* --- NUEVO BOTÓN: Eliminar Usuario --- */}
-                  <button
-                    className="btn btn-danger"
-                    onClick={() => handleDeleteUser(user.id, user.nombre)}
-                    style={{ marginLeft: "10px" }} // Espacio entre botones, puedes moverlo a CSS
-                  >
-                    Eliminar
-                  </button>
-                  {/* --- FIN NUEVO BOTÓN --- */}
+                  <strong>{user.nombre}</strong>
+                  <div className="user-contact">
+                    <small>{user.telefono}</small>
+                  </div>
+                </td>
+                <td>{user.plan}</td>
+                <td>
+                  {user.fechaVencimiento && user.fechaVencimiento !== 'N/A (Tiquetera)' 
+                    ? new Date(user.fechaVencimiento).toLocaleDateString()
+                    : 'N/A (Tiquetera)'}
+                </td>
+                <td>
+                  <span className={user.debe > 0 ? "debt-amount" : "no-debt"}>
+                    ${user.debe.toLocaleString()}
+                  </span>
+                </td>
+                <td>{getUserStatus(user)}</td>
+                <td>
+                  <div className="action-buttons">
+                    <Link to={`/users/${user.id}`} className="btn btn-primary">
+                      Ver Perfil
+                    </Link>
+                    <button
+                      className="btn btn-danger"
+                      onClick={() => handleDeleteUser(user.id, user.nombre)}
+                    >
+                      Eliminar
+                    </button>
+                  </div>
                 </td>
               </tr>
             ))}
           </tbody>
         </table>
+        {sortedUsers.length === 0 && (
+          <div className="no-users">
+            <p>No se encontraron usuarios. {searchTerm && "Intenta con otros términos de búsqueda."}</p>
+          </div>
+        )}
       </div>
     </div>
   );
