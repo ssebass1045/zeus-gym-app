@@ -1,6 +1,6 @@
 import React, { createContext, useState, useEffect } from "react";
 import { db } from '../firebaseConfig'; // <-- ¡Añadir esta línea!
-import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc } from 'firebase/firestore'; // <-- ¡Añadir esta línea!
+import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, writeBatch } from 'firebase/firestore'; // <-- ¡Añadir esta línea!
 import { auth } from '../firebaseConfig'; // <-- ¡Añadir esta línea!
 import { onAuthStateChanged } from 'firebase/auth';
 import { signOut } from "firebase/auth";
@@ -199,6 +199,47 @@ export const DataProvider = ({ children }) => {
     }
   };
 
+  // Función para limpiar deudas pequeñas
+  const clearSmallDebts = async (maxAmount = 1000) => {
+    try {
+      const usersCollectionRef = collection(db, "users");
+      const usersSnapshot = await getDocs(usersCollectionRef);
+      
+      const batch = writeBatch(db);
+      let clearedCount = 0;
+      
+      usersSnapshot.docs.forEach(doc => {
+        const userData = doc.data();
+        if (userData.debe && userData.debe <= maxAmount && userData.debe > 0) {
+          // Actualizar el usuario para eliminar la deuda pequeña
+          const userRef = doc.ref;
+          batch.update(userRef, { debe: 0 });
+          clearedCount++;
+        }
+      });
+      
+      if (clearedCount > 0) {
+        await batch.commit();
+        
+        // Actualizar estado local
+        setUsers(prevUsers => 
+          prevUsers.map(user => 
+            user.debe && user.debe <= maxAmount && user.debe > 0 
+              ? { ...user, debe: 0 } 
+              : user
+          )
+        );
+        
+        alert(`Se limpiaron ${clearedCount} deudas pequeñas (≤ $${maxAmount.toLocaleString()}).`);
+      } else {
+        alert(`No se encontraron deudas pequeñas (≤ $${maxAmount.toLocaleString()}) para limpiar.`);
+      }
+    } catch (error) {
+      console.error("Error al limpiar deudas pequeñas:", error);
+      alert("Error al limpiar deudas pequeñas. Por favor, inténtalo de nuevo.");
+    }
+  };
+
 
 
   return (
@@ -218,6 +259,7 @@ export const DataProvider = ({ children }) => {
         attendances,
         setAttendances,
         addAttendance,
+        clearSmallDebts,
       }}
     >
       {children}

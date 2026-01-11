@@ -79,7 +79,8 @@
 }
 
 .birthday-item .birthday-detail {
-  color: #aaa;
+  color: #333;
+  font-weight: bold;
 }
 
 .no-alerts, .no-birthdays {

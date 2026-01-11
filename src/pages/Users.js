@@ -4,7 +4,7 @@ import { Link } from "react-router-dom";
 import "./Users.css";
 
 const Users = () => {
-  const { users, addUser, deleteUser } = useContext(DataContext);
+  const { users, addUser, deleteUser, clearSmallDebts } = useContext(DataContext);
   const [newUser, setNewUser] = useState({
     nombre: "",
     direccion: "",
@@ -205,12 +205,29 @@ const Users = () => {
       </div>
 
       <div className="add-user-section">
-        <button
-          className="btn btn-primary"
-          onClick={() => setShowAddUserForm(!showAddUserForm)}
-        >
-          {showAddUserForm ? "Ocultar Formulario" : "Añadir Nuevo Usuario"}
-        </button>
+        <div className="action-buttons-row">
+          <button
+            className="btn btn-primary"
+            onClick={() => setShowAddUserForm(!showAddUserForm)}
+          >
+            {showAddUserForm ? "Ocultar Formulario" : "Añadir Nuevo Usuario"}
+          </button>
+          <button
+            className="btn btn-warning"
+            onClick={() => {
+              const maxAmount = prompt("Ingrese el monto máximo para limpiar deudas (ej: 1000 para deudas ≤ $1,000):", "1000");
+              if (maxAmount && !isNaN(maxAmount) && parseFloat(maxAmount) >= 0) {
+                if (window.confirm(`¿Está seguro de limpiar todas las deudas ≤ $${parseFloat(maxAmount).toLocaleString()}? Esta acción no se puede deshacer.`)) {
+                  clearSmallDebts(parseFloat(maxAmount));
+                }
+              } else if (maxAmount !== null) {
+                alert("Por favor ingrese un monto válido.");
+              }
+            }}
+          >
+            🧹 Limpiar Deudas Pequeñas
+          </button>
+        </div>
         {showAddUserForm && (
           <div className="add-user-form-container">
             <h3>Agregar Nuevo Usuario</h3>
