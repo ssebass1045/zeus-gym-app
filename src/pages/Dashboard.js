@@ -40,6 +40,27 @@ const getTotalRevenue = (users, startDate, endDate) => {
   return totalRevenue;
 };
 
+// Función para obtener ingresos del año actual
+const getCurrentYearRevenue = (users) => {
+  const currentYear = new Date().getFullYear();
+  const startDate = new Date(currentYear, 0, 1); // 1 de enero del año actual
+  const endDate = new Date(currentYear, 11, 31); // 31 de diciembre del año actual
+  
+  return getTotalRevenue(users, startDate.toISOString().split('T')[0], endDate.toISOString().split('T')[0]);
+};
+
+// Función para obtener ingresos del mes actual
+const getCurrentMonthRevenue = (users) => {
+  const now = new Date();
+  const currentYear = now.getFullYear();
+  const currentMonth = now.getMonth();
+  
+  const startDate = new Date(currentYear, currentMonth, 1);
+  const endDate = new Date(currentYear, currentMonth + 1, 0); // Último día del mes
+  
+  return getTotalRevenue(users, startDate.toISOString().split('T')[0], endDate.toISOString().split('T')[0]);
+};
+
 // ... (tus funciones helper existentes, como getTotalRevenue, getActiveUsers, etc.) ...
 
 const getMonthlyRevenueHistory = (users) => {
@@ -175,8 +196,9 @@ const Dashboard = () => {
   // Calculate all metrics
   const totalUsers = users.length;
   const activeUsers = getActiveUsers(users).length;
-  const totalRevenue = getTotalRevenue(users);
-  const monthlyRevenue = getMonthlyRevenue(users, selectedMonth);
+  const currentYearRevenue = getCurrentYearRevenue(users);
+  const currentMonthRevenue = getCurrentMonthRevenue(users);
+  const selectedMonthRevenue = getMonthlyRevenue(users, selectedMonth);
   const totalDebt = getTotalDebt(users);
   const monthlyRevenueHistory = getMonthlyRevenueHistory(users);
   const upcomingExpirations = getUpcomingExpirations(users);
@@ -212,12 +234,12 @@ const Dashboard = () => {
           <span className="metric-value">{activeUsers}</span>
         </div>
         <div className="metric-card">
-          <h3>Ingresos Totales</h3>
-          <span className="metric-value">${totalRevenue.toLocaleString()}</span>
+          <h3>Ingresos Año {new Date().getFullYear()}</h3>
+          <span className="metric-value">${currentYearRevenue.toLocaleString()}</span>
         </div>
         <div className="metric-card">
-          <h3>Ingresos del Mes</h3>
-          <span className="metric-value">${monthlyRevenue.toLocaleString()}</span>
+          <h3>Ingresos Mes Actual</h3>
+          <span className="metric-value">${currentMonthRevenue.toLocaleString()}</span>
         </div>
         <div className="metric-card">
           <h3>Deudas Pendientes</h3>
