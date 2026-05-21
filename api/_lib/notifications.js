@@ -85,6 +85,13 @@ const buildMessage = ({ user, notifType }) => {
   const expiry = formatDateCO(user?.fechaVencimiento);
   const payLine = `Puedes pagar por Nequi ${PAYMENT_NEQUI} o Bancolombia Ahorros ${PAYMENT_BANCOLOMBIA} y enviarnos el comprobante por este WhatsApp.`;
 
+  if (notifType === "welcome") {
+    const plan = user?.plan ? String(user.plan) : "tu plan";
+    return `${name}, bienvenid@ a ${GYM_NAME}. Quedaste registrad@ con ${plan} y tu vencimiento es ${expiry}. ¡Vamos con toda!`;
+  }
+  if (notifType === "measurement") {
+    return `${name}, registramos tu medición en ${GYM_NAME}. Sigue así, la constancia lo es todo.`;
+  }
   if (notifType === "pre_expiry_3") {
     return `${name}, tu membresía en ${GYM_NAME} vence en 3 días (fecha ${expiry}). ${payLine}`;
   }
@@ -236,6 +243,40 @@ const sendRenewalNotification = async ({ userId }) => {
   });
 };
 
+const sendWelcomeNotification = async ({ userId }) => {
+  const todayIso = getTodayIsoCO();
+  const userDoc = await db.collection("users").doc(String(userId)).get();
+  if (!userDoc.exists) {
+    const err = new Error("User not found");
+    err.status = 404;
+    throw err;
+  }
+  const user = { id: userDoc.id, ...userDoc.data() };
+  return sendAndLog({
+    user,
+    notifType: "welcome",
+    dayKey: todayIso,
+    trigger: "welcome",
+  });
+};
+
+const sendMeasurementNotification = async ({ userId, date }) => {
+  const dayKey = date || getTodayIsoCO();
+  const userDoc = await db.collection("users").doc(String(userId)).get();
+  if (!userDoc.exists) {
+    const err = new Error("User not found");
+    err.status = 404;
+    throw err;
+  }
+  const user = { id: userDoc.id, ...userDoc.data() };
+  return sendAndLog({
+    user,
+    notifType: "measurement",
+    dayKey,
+    trigger: "measurement",
+  });
+};
+
 const sendNotificationForUser = async ({ userId, type, dayKey }) => {
   const todayIso = getTodayIsoCO();
   const userDoc = await db.collection("users").doc(String(userId)).get();
@@ -256,5 +297,7 @@ const sendNotificationForUser = async ({ userId, type, dayKey }) => {
 module.exports = {
   runDailyNotifications,
   sendRenewalNotification,
+  sendWelcomeNotification,
+  sendMeasurementNotification,
   sendNotificationForUser,
 };

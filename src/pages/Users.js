@@ -1,10 +1,12 @@
 import React, { useState, useContext } from "react";
 import { DataContext } from "../contexts/DataContext";
 import { Link } from "react-router-dom";
+import { auth } from "../firebaseConfig";
 import "./Users.css";
 
 const Users = () => {
-  const { users, addUser, deleteUser, clearSmallDebts } = useContext(DataContext);
+  const { users, addUser, deleteUser, clearSmallDebts } =
+    useContext(DataContext);
   const [newUser, setNewUser] = useState({
     nombre: "",
     direccion: "",
@@ -19,24 +21,30 @@ const Users = () => {
     observaciones: "",
   });
   const [showAddUserForm, setShowAddUserForm] = useState(false);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [sortConfig, setSortConfig] = useState({ key: 'nombre', direction: 'ascending' }); 
+  const [searchTerm, setSearchTerm] = useState("");
+  const [sortConfig, setSortConfig] = useState({
+    key: "nombre",
+    direction: "ascending",
+  });
 
   const handleInputChange = (e) => {
     setNewUser({ ...newUser, [e.target.name]: e.target.value });
   };
 
-
   // --- NUEVA FUNCIÓN: handleDeleteUser ---
   const handleDeleteUser = (userId, userName) => {
-    if (window.confirm(`¿Estás seguro de que quieres eliminar a ${userName}? Esta acción es irreversible.`)) {
+    if (
+      window.confirm(
+        `¿Estás seguro de que quieres eliminar a ${userName}? Esta acción es irreversible.`,
+      )
+    ) {
       deleteUser(userId);
       alert(`${userName} ha sido eliminado correctamente.`);
     }
   };
   // --- FIN NUEVA FUNCIÓN ---
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     const planPrices = {
       Quincena: 40000,
@@ -71,17 +79,17 @@ const Users = () => {
 
     const imc = calculateIMC(
       parseFloat(newUser.peso),
-      parseFloat(newUser.altura)
+      parseFloat(newUser.altura),
     );
     const imcCategory = getIMCCategory(imc);
     const fechaVencimiento = calculateDueDate(
       newUser.plan,
-      newUser.fechaIngreso
+      newUser.fechaIngreso,
     );
     const costoPlan = planPrices[newUser.plan];
     const debe = costoPlan - parseFloat(newUser.pagoRealizado);
 
-        addUser({
+    const created = await addUser({
       ...newUser,
       pagoRealizado: parseFloat(newUser.pagoRealizado || 0), // <-- ¡Añadir/Modificar esta línea!
       id: Date.now(), // Simple ID generation
@@ -102,6 +110,22 @@ const Users = () => {
       historialMedidas: [],
     });
 
+    try {
+      const token = await auth.currentUser?.getIdToken();
+      if (created?.id && token) {
+        await fetch("/api/notifications/welcome", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ userId: created.id }),
+        });
+      }
+    } catch (err) {
+      console.error("Error enviando WhatsApp de bienvenida:", err);
+    }
+
     // Reset form
     setNewUser({
       nombre: "",
@@ -119,11 +143,12 @@ const Users = () => {
   };
 
   // --- NUEVA LÓGICA DE FILTRADO ---
-  const filteredUsers = users.filter(user =>
-    user.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    user.telefono.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    user.direccion.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    user.plan.toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredUsers = users.filter(
+    (user) =>
+      user.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      user.telefono.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      user.direccion.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      user.plan.toLowerCase().includes(searchTerm.toLowerCase()),
   );
   // --- FIN NUEVA LÓGICA DE FILTRADO ---
   // --- NUEVA LÓGICA DE ORDENACIÓN ---
@@ -135,24 +160,30 @@ const Users = () => {
         const aValue = a[sortConfig.key];
         const bValue = b[sortConfig.key];
 
-        if (sortConfig.key === 'fechaVencimiento') {
+        if (sortConfig.key === "fechaVencimiento") {
           // Tratar fechas nulas o 'N/A' como muy lejanas
-          const dateA = aValue && aValue !== 'N/A (Tiquetera)' ? new Date(aValue) : new Date('9999-12-31');
-          const dateB = bValue && bValue !== 'N/A (Tiquetera)' ? new Date(bValue) : new Date('9999-12-31');
+          const dateA =
+            aValue && aValue !== "N/A (Tiquetera)"
+              ? new Date(aValue)
+              : new Date("9999-12-31");
+          const dateB =
+            bValue && bValue !== "N/A (Tiquetera)"
+              ? new Date(bValue)
+              : new Date("9999-12-31");
           if (dateA < dateB) {
-            return sortConfig.direction === 'ascending' ? -1 : 1;
+            return sortConfig.direction === "ascending" ? -1 : 1;
           }
           if (dateA > dateB) {
-            return sortConfig.direction === 'ascending' ? 1 : -1;
+            return sortConfig.direction === "ascending" ? 1 : -1;
           }
           return 0;
         } else {
           // Ordenación genérica para otros campos
           if (aValue < bValue) {
-            return sortConfig.direction === 'ascending' ? -1 : 1;
+            return sortConfig.direction === "ascending" ? -1 : 1;
           }
           if (aValue > bValue) {
-            return sortConfig.direction === 'ascending' ? 1 : -1;
+            return sortConfig.direction === "ascending" ? 1 : -1;
           }
           return 0;
         }
@@ -163,28 +194,28 @@ const Users = () => {
   // --- FIN NUEVA LÓGICA DE ORDENACIÓN ---
 
   const requestSort = (key) => {
-    let direction = 'ascending';
-    if (sortConfig.key === key && sortConfig.direction === 'ascending') {
-      direction = 'descending';
+    let direction = "ascending";
+    if (sortConfig.key === key && sortConfig.direction === "ascending") {
+      direction = "descending";
     }
     setSortConfig({ key, direction });
   };
 
   // Función para obtener clase CSS para indicador de ordenamiento
   const getSortClass = (key) => {
-    if (sortConfig.key !== key) return '';
-    return sortConfig.direction === 'ascending' ? 'ascending' : 'descending';
+    if (sortConfig.key !== key) return "";
+    return sortConfig.direction === "ascending" ? "ascending" : "descending";
   };
 
   // Función para obtener estado del usuario
   const getUserStatus = (user) => {
     const today = new Date();
     const expirationDate = new Date(user.fechaVencimiento);
-    
+
     if (user.debe > 0) {
       return <span className="status-badge status-debt">Con Deuda</span>;
     }
-    if (user.plan !== 'Tiquetera' && expirationDate < today) {
+    if (user.plan !== "Tiquetera" && expirationDate < today) {
       return <span className="status-badge status-expired">Vencido</span>;
     }
     return <span className="status-badge status-active">Activo</span>;
@@ -215,9 +246,20 @@ const Users = () => {
           <button
             className="btn btn-warning"
             onClick={() => {
-              const maxAmount = prompt("Ingrese el monto máximo para limpiar deudas (ej: 1000 para deudas ≤ $1,000):", "1000");
-              if (maxAmount && !isNaN(maxAmount) && parseFloat(maxAmount) >= 0) {
-                if (window.confirm(`¿Está seguro de limpiar todas las deudas ≤ $${parseFloat(maxAmount).toLocaleString()}? Esta acción no se puede deshacer.`)) {
+              const maxAmount = prompt(
+                "Ingrese el monto máximo para limpiar deudas (ej: 1000 para deudas ≤ $1,000):",
+                "1000",
+              );
+              if (
+                maxAmount &&
+                !isNaN(maxAmount) &&
+                parseFloat(maxAmount) >= 0
+              ) {
+                if (
+                  window.confirm(
+                    `¿Está seguro de limpiar todas las deudas ≤ $${parseFloat(maxAmount).toLocaleString()}? Esta acción no se puede deshacer.`,
+                  )
+                ) {
                   clearSmallDebts(parseFloat(maxAmount));
                 }
               } else if (maxAmount !== null) {
@@ -359,27 +401,27 @@ const Users = () => {
         <table className="table">
           <thead>
             <tr>
-              <th 
-                className={getSortClass('nombre')}
-                onClick={() => requestSort('nombre')}
+              <th
+                className={getSortClass("nombre")}
+                onClick={() => requestSort("nombre")}
               >
                 Nombre
               </th>
-              <th 
-                className={getSortClass('plan')}
-                onClick={() => requestSort('plan')}
+              <th
+                className={getSortClass("plan")}
+                onClick={() => requestSort("plan")}
               >
                 Plan
               </th>
-              <th 
-                className={getSortClass('fechaVencimiento')}
-                onClick={() => requestSort('fechaVencimiento')}
+              <th
+                className={getSortClass("fechaVencimiento")}
+                onClick={() => requestSort("fechaVencimiento")}
               >
                 Vencimiento
               </th>
-              <th 
-                className={getSortClass('debe')}
-                onClick={() => requestSort('debe')}
+              <th
+                className={getSortClass("debe")}
+                onClick={() => requestSort("debe")}
               >
                 Deuda
               </th>
@@ -398,9 +440,10 @@ const Users = () => {
                 </td>
                 <td>{user.plan}</td>
                 <td>
-                  {user.fechaVencimiento && user.fechaVencimiento !== 'N/A (Tiquetera)' 
+                  {user.fechaVencimiento &&
+                  user.fechaVencimiento !== "N/A (Tiquetera)"
                     ? new Date(user.fechaVencimiento).toLocaleDateString()
-                    : 'N/A (Tiquetera)'}
+                    : "N/A (Tiquetera)"}
                 </td>
                 <td>
                   <span className={user.debe > 0 ? "debt-amount" : "no-debt"}>
@@ -427,7 +470,10 @@ const Users = () => {
         </table>
         {sortedUsers.length === 0 && (
           <div className="no-users">
-            <p>No se encontraron usuarios. {searchTerm && "Intenta con otros términos de búsqueda."}</p>
+            <p>
+              No se encontraron usuarios.{" "}
+              {searchTerm && "Intenta con otros términos de búsqueda."}
+            </p>
           </div>
         )}
       </div>

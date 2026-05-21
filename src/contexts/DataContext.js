@@ -125,9 +125,11 @@ export const DataProvider = ({ children }) => {
       setUsers((prevUsers) => [...prevUsers, finalUserForState]);
 
       console.log("Usuario añadido con ID: ", docRef.id);
+      return finalUserForState;
     } catch (e) {
       console.error("Error al añadir usuario: ", e);
       alert("Error al añadir usuario. Por favor, inténtalo de nuevo.");
+      return null;
     }
   };
 
