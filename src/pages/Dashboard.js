@@ -1,451 +1,481 @@
-/* src/pages/Dashboard.js */
-import React, { useContext, useState } from 'react';
-import { DataContext } from '../contexts/DataContext';
-import { Link } from 'react-router-dom';
-import './Dashboard.css';
-//import BackupManager from '../components/BackupManager';
+import React, { useContext, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
+import {
+  CartesianGrid,
+  Cell,
+  Legend,
+  Line,
+  LineChart,
+  Pie,
+  PieChart,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
+import { auth } from "../firebaseConfig";
+import { DataContext } from "../contexts/DataContext";
+import "./Dashboard.css";
 
-// --- Helper Functions to Calculate Metrics ---
+const toAmount = (value) => {
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  const num = Number(String(value ?? "").replace(/[^\d.-]/g, ""));
+  return Number.isFinite(num) ? num : 0;
+};
 
-const getActiveUsers = (users) => {
-  const today = new Date();
-  return users.filter(user => {
-    if (user.debe > 0) return false;
-    if (user.plan === 'Tiquetera') {
-      return (user.diasHabiles || 0) < 15;
-    }
-    const expirationDate = new Date(user.fechaVencimiento);
-    return expirationDate >= today;
-  });
+const startOfDay = (d) => {
+  const x = new Date(d);
+  x.setHours(0, 0, 0, 0);
+  return x;
+};
+
+const daysBetween = (from, to) => {
+  const ms = startOfDay(to).getTime() - startOfDay(from).getTime();
+  return Math.round(ms / (24 * 60 * 60 * 1000));
 };
 
 const getTotalRevenue = (users, startDate, endDate) => {
-  let totalRevenue = 0;
   const start = startDate ? new Date(startDate) : null;
   const end = endDate ? new Date(endDate) : null;
+  let total = 0;
 
-  users.forEach(user => {
-    if (user.historialPagos) {
-      user.historialPagos.forEach(payment => {
-        const paymentDate = new Date(payment.fecha); // Asumiendo que 'fecha' es la propiedad de la fecha del pago
-        if (
-          (!start || paymentDate >= start) &&
-          (!end || paymentDate <= end)
-        ) {
-          totalRevenue += (payment.monto || 0); // Asumiendo que 'monto' es la propiedad del monto del pago
-        }
-      });
-    }
+  users.forEach((user) => {
+    (user.historialPagos || []).forEach((payment) => {
+      const paymentDate = new Date(payment.fecha);
+      if ((!start || paymentDate >= start) && (!end || paymentDate <= end)) {
+        total += toAmount(payment.monto);
+      }
+    });
   });
-  return totalRevenue;
-};
 
-// Función para obtener ingresos del año actual
-const getCurrentYearRevenue = (users) => {
-  const currentYear = new Date().getFullYear();
-  const startDate = new Date(currentYear, 0, 1); // 1 de enero del año actual
-  const endDate = new Date(currentYear, 11, 31); // 31 de diciembre del año actual
-  
-  return getTotalRevenue(users, startDate.toISOString().split('T')[0], endDate.toISOString().split('T')[0]);
+  return total;
 };
-
-// Función para obtener ingresos del mes actual
-const getCurrentMonthRevenue = (users) => {
-  const now = new Date();
-  const currentYear = now.getFullYear();
-  const currentMonth = now.getMonth();
-  
-  const startDate = new Date(currentYear, currentMonth, 1);
-  const endDate = new Date(currentYear, currentMonth + 1, 0); // Último día del mes
-  
-  return getTotalRevenue(users, startDate.toISOString().split('T')[0], endDate.toISOString().split('T')[0]);
-};
-
-// ... (tus funciones helper existentes, como getTotalRevenue, getActiveUsers, etc.) ...
 
 const getMonthlyRevenueHistory = (users) => {
-  const monthlyRevenue = {}; // Usaremos un objeto para agrupar por 'YYYY-MM'
+  const monthlyRevenue = {};
 
-  users.forEach(user => {
-    if (user.historialPagos) {
-      user.historialPagos.forEach(payment => {
-        const paymentDate = new Date(payment.fecha);
-        const year = paymentDate.getFullYear();
-        const month = paymentDate.getMonth() + 1; // getMonth() es 0-indexado
-        const monthKey = `${year}-${month < 10 ? '0' : ''}${month}`; // Formato YYYY-MM
-
-        if (!monthlyRevenue[monthKey]) {
-          monthlyRevenue[monthKey] = 0;
-        }
-        monthlyRevenue[monthKey] += (payment.monto || 0);
-      });
-    }
-  });
-
-  // Convertir el objeto a un array de objetos para facilitar el renderizado
-  const sortedMonthlyRevenue = Object.keys(monthlyRevenue)
-    .map(key => ({
-      month: key,
-      revenue: monthlyRevenue[key]
-    }))
-    .sort((a, b) => new Date(b.month) - new Date(a.month)); // Ordenar del más reciente al más antiguo
-
-  return sortedMonthlyRevenue;
-};
-
-
-const getTotalDebt = (users) => {
-  return users.reduce((total, user) => total + (user.debe || 0), 0);
-};
-
-const getUpcomingExpirations = (users) => {
-  const today = new Date();
-  const fiveDaysFromNow = new Date();
-  fiveDaysFromNow.setDate(today.getDate() + 5);
-  return users.filter(user => {
-    if (user.plan === 'Tiquetera') return false;
-    const expirationDate = new Date(user.fechaVencimiento);
-    return expirationDate > today && expirationDate <= fiveDaysFromNow;
-  });
-};
-
-const getExpiredUsers = (users) => {
-    const today = new Date();
-    return users.filter(user => {
-        if (user.plan === 'Tiquetera') return false;
-        const expirationDate = new Date(user.fechaVencimiento);
-        return expirationDate < today;
+  users.forEach((user) => {
+    (user.historialPagos || []).forEach((payment) => {
+      const paymentDate = new Date(payment.fecha);
+      if (Number.isNaN(paymentDate.getTime())) return;
+      const year = paymentDate.getFullYear();
+      const month = paymentDate.getMonth() + 1;
+      const monthKey = `${year}-${month < 10 ? "0" : ""}${month}`;
+      monthlyRevenue[monthKey] =
+        (monthlyRevenue[monthKey] || 0) + toAmount(payment.monto);
     });
+  });
+
+  return Object.keys(monthlyRevenue)
+    .map((key) => ({ month: key, revenue: monthlyRevenue[key] }))
+    .sort((a, b) => new Date(a.month) - new Date(b.month));
 };
 
-const getUsersWithDebt = (users) => {
-  return users.filter(user => user.debe > 0);
-};
+const getPlanDistribution = (users) =>
+  users.reduce(
+    (acc, u) => {
+      const plan = u.plan || "Sin plan";
+      acc[plan] = (acc[plan] || 0) + 1;
+      return acc;
+    },
+    { Quincena: 0, Mensualidad: 0, Tiquetera: 0 },
+  );
 
 const getUpcomingBirthdays = (users) => {
-    const today = new Date();
-    const thirtyDaysFromNow = new Date();
-    thirtyDaysFromNow.setDate(today.getDate() + 30);
-    
-    return users.filter(user => {
-        if (!user.cumpleanos) return false;
-        const birthday = new Date(user.cumpleanos);
-        birthday.setFullYear(today.getFullYear());
-        // If birthday already passed this year, check for next year
-        if (birthday < today) {
-            birthday.setFullYear(today.getFullYear() + 1);
-        }
-        return birthday <= thirtyDaysFromNow;
-    }).sort((a,b) => new Date(a.cumpleanos) - new Date(b.cumpleanos));
+  const today = startOfDay(new Date());
+  const in30 = startOfDay(new Date());
+  in30.setDate(in30.getDate() + 30);
+
+  return users
+    .filter((u) => !!u.cumpleanos)
+    .map((u) => {
+      const raw = new Date(u.cumpleanos);
+      if (Number.isNaN(raw.getTime())) return null;
+      const b = new Date(raw);
+      b.setFullYear(today.getFullYear());
+      if (b < today) b.setFullYear(today.getFullYear() + 1);
+      return { user: u, nextBirthday: b };
+    })
+    .filter(Boolean)
+    .filter((x) => x.nextBirthday <= in30)
+    .sort((a, b) => a.nextBirthday - b.nextBirthday);
 };
-
-const getPlanDistribution = (users) => {
-    return users.reduce((acc, user) => {
-        acc[user.plan] = (acc[user.plan] || 0) + 1;
-        return acc;
-    }, { Quincena: 0, Mensualidad: 0, Tiquetera: 0 });
-};
-
-// Función para obtener color según el plan
-const getPlanColor = (plan) => {
-  switch(plan) {
-    case 'Quincena': return '#00aaff';
-    case 'Mensualidad': return '#28a745';
-    case 'Tiquetera': return '#ffc107';
-    default: return '#6c757d';
-  }
-};
-
-
-// --- The Main Dashboard Component ---
 
 const Dashboard = () => {
   const { users } = useContext(DataContext);
   const [selectedMonth, setSelectedMonth] = useState(
-    new Date().toISOString().substr(0, 7) // Formato YYYY-MM
+    new Date().toISOString().slice(0, 7),
   );
-  // Estados para controlar acordeones
-  const [expandedSections, setExpandedSections] = useState({
-    upcomingExpirations: true,
-    expiredUsers: true,
-    usersWithDebt: true,
-    upcomingBirthdays: true,
-    monthlyRevenue: true
-  });
-  
-  const toggleSection = (section) => {
-    setExpandedSections(prev => ({
-      ...prev,
-      [section]: !prev[section]
-    }));
-  };
+  const [sending, setSending] = useState({});
 
-  // Función para obtener ingresos de un mes específico
-  const getMonthlyRevenue = (users, yearMonth) => {
-    const [year, month] = yearMonth.split('-').map(Number);
+  const today = startOfDay(new Date());
+
+  const monthRevenue = useMemo(() => {
+    const [year, month] = selectedMonth.split("-").map(Number);
     const firstDay = new Date(year, month - 1, 1);
     const lastDay = new Date(year, month, 0);
-    
     return getTotalRevenue(
-      users, 
-      firstDay.toISOString().split('T')[0], 
-      lastDay.toISOString().split('T')[0]
+      users,
+      firstDay.toISOString().split("T")[0],
+      lastDay.toISOString().split("T")[0],
     );
+  }, [users, selectedMonth]);
+
+  const currentYearRevenue = useMemo(() => {
+    const year = new Date().getFullYear();
+    return getTotalRevenue(users, `${year}-01-01`, `${year}-12-31`);
+  }, [users]);
+
+  const currentMonthRevenue = useMemo(() => {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = now.getMonth();
+    const start = new Date(year, month, 1);
+    const end = new Date(year, month + 1, 0);
+    return getTotalRevenue(
+      users,
+      start.toISOString().split("T")[0],
+      end.toISOString().split("T")[0],
+    );
+  }, [users]);
+
+  const totalDebt = useMemo(
+    () => users.reduce((t, u) => t + toAmount(u.debe), 0),
+    [users],
+  );
+
+  const activeUsers = useMemo(() => {
+    return users.filter((u) => {
+      if (toAmount(u.debe) > 0) return false;
+      if (u.plan === "Tiquetera") return (u.diasHabiles || 0) < 15;
+      const exp = new Date(u.fechaVencimiento);
+      if (Number.isNaN(exp.getTime())) return false;
+      return startOfDay(exp) >= today;
+    }).length;
+  }, [users, today]);
+
+  const monthlyRevenueHistory = useMemo(
+    () => getMonthlyRevenueHistory(users),
+    [users],
+  );
+
+  const last12Revenue = useMemo(() => {
+    if (!monthlyRevenueHistory.length) return [];
+    return monthlyRevenueHistory.slice(-12);
+  }, [monthlyRevenueHistory]);
+
+  const planDistribution = useMemo(() => getPlanDistribution(users), [users]);
+
+  const planData = useMemo(() => {
+    const colors = {
+      Quincena: "#60a5fa",
+      Mensualidad: "#34d399",
+      Tiquetera: "#fbbf24",
+      "Sin plan": "#9ca3af",
+    };
+    return Object.entries(planDistribution).map(([name, value]) => ({
+      name,
+      value,
+      color: colors[name] || "#9ca3af",
+    }));
+  }, [planDistribution]);
+
+  const whatsappBuckets = useMemo(() => {
+    const expiringIn3 = [];
+    const expiringToday = [];
+    const expiredDay1to5 = [];
+    const expiredDay6to15 = [];
+
+    users.forEach((u) => {
+      if (u.plan === "Tiquetera") return;
+      if (!u.fechaVencimiento) return;
+      const exp = new Date(u.fechaVencimiento);
+      if (Number.isNaN(exp.getTime())) return;
+      const daysToExpiry = daysBetween(today, exp);
+      const daysSinceExpired = -daysToExpiry;
+      const row = { ...u, daysToExpiry, daysSinceExpired };
+
+      if (daysToExpiry === 3) expiringIn3.push(row);
+      if (daysToExpiry === 0) expiringToday.push(row);
+      if (daysSinceExpired >= 1 && daysSinceExpired <= 5)
+        expiredDay1to5.push(row);
+      if (daysSinceExpired >= 6 && daysSinceExpired <= 15)
+        expiredDay6to15.push(row);
+    });
+
+    const sortByExpiry = (a, b) =>
+      (a.daysToExpiry ?? 0) - (b.daysToExpiry ?? 0);
+    const sortByOverdue = (a, b) =>
+      (b.daysSinceExpired ?? 0) - (a.daysSinceExpired ?? 0);
+
+    return {
+      expiringIn3: expiringIn3.sort(sortByExpiry),
+      expiringToday: expiringToday.sort(sortByExpiry),
+      expiredDay1to5: expiredDay1to5.sort(sortByOverdue),
+      expiredDay6to15: expiredDay6to15.sort(sortByOverdue),
+    };
+  }, [users, today]);
+
+  const upcomingBirthdays = useMemo(() => getUpcomingBirthdays(users), [users]);
+
+  const sendManualWhatsapp = async ({ userId, type }) => {
+    setSending((s) => ({ ...s, [`${userId}_${type}`]: true }));
+    try {
+      const token = await auth.currentUser?.getIdToken();
+      if (!token) {
+        alert("Debes iniciar sesión para enviar WhatsApp.");
+        return;
+      }
+      const res = await fetch("/api/notifications/manual", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ userId, type }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.ok) {
+        alert(`No se pudo enviar: ${data.error || "Error"}`);
+        return;
+      }
+      alert("WhatsApp enviado.");
+    } catch (e) {
+      alert("No se pudo enviar WhatsApp.");
+    } finally {
+      setSending((s) => ({ ...s, [`${userId}_${type}`]: false }));
+    }
   };
 
-  // Calculate all metrics
-  const totalUsers = users.length;
-  const activeUsers = getActiveUsers(users).length;
-  const currentYearRevenue = getCurrentYearRevenue(users);
-  const currentMonthRevenue = getCurrentMonthRevenue(users);
-  const selectedMonthRevenue = getMonthlyRevenue(users, selectedMonth);
-  const totalDebt = getTotalDebt(users);
-  const monthlyRevenueHistory = getMonthlyRevenueHistory(users);
-  const upcomingExpirations = getUpcomingExpirations(users);
-  const expiredUsers = getExpiredUsers(users);
-  const usersWithDebt = getUsersWithDebt(users);
-  const upcomingBirthdays = getUpcomingBirthdays(users);
-  const planDistribution = getPlanDistribution(users);
+  const StatCard = ({ title, value, sub }) => (
+    <div className="zg-card zg-stat">
+      <div className="zg-stat-title">{title}</div>
+      <div className="zg-stat-value">{value}</div>
+      {sub ? <div className="zg-stat-sub">{sub}</div> : null}
+    </div>
+  );
+
+  const UsersTable = ({
+    rows,
+    getActionType,
+    actionLabel,
+    emptyLabel,
+  }) => (
+    <div className="zg-card">
+      <div className="zg-table">
+        <div className="zg-table-head">
+          <div>Usuario</div>
+          <div>Teléfono</div>
+          <div>Vencimiento</div>
+          <div></div>
+        </div>
+        {rows.length ? (
+          rows.map((u) => {
+            const type = getActionType(u);
+            const key = `${u.id}_${type}`;
+            return (
+              <div className="zg-table-row" key={u.id}>
+                <div className="zg-user">
+                  <Link to={`/users/${u.id}`} className="zg-user-name">
+                    {u.nombre}
+                  </Link>
+                  <div className="zg-user-sub">{u.plan}</div>
+                </div>
+                <div className="zg-mono">{u.telefono || "-"}</div>
+                <div className="zg-mono">{u.fechaVencimiento || "-"}</div>
+                <div className="zg-actions">
+                  <button
+                    className="zg-btn zg-btn-primary"
+                    onClick={() => sendManualWhatsapp({ userId: u.id, type })}
+                    disabled={!!sending[key]}
+                  >
+                    {sending[key] ? "Enviando..." : actionLabel}
+                  </button>
+                </div>
+              </div>
+            );
+          })
+        ) : (
+          <div className="zg-empty">{emptyLabel}</div>
+        )}
+      </div>
+    </div>
+  );
 
   return (
-    <div className="dashboard-page">
-      <h1>Dashboard ZEUS GYM</h1>
-      
-      {/* Selector de mes */}
-      <div className="month-selector card">
-        <h3>Seleccionar Mes para Ingresos</h3>
-        <input
-          type="month"
-          value={selectedMonth}
-          onChange={(e) => setSelectedMonth(e.target.value)}
-          className="form-control"
-          style={{ maxWidth: '200px' }}
+    <div className="zg-page">
+      <div className="zg-header">
+        <div>
+          <div className="zg-title">ZEUS GYM</div>
+          <div className="zg-subtitle">Control, ingresos y notificaciones</div>
+        </div>
+        <div className="zg-month">
+          <div className="zg-month-label">Mes</div>
+          <input
+            type="month"
+            value={selectedMonth}
+            onChange={(e) => setSelectedMonth(e.target.value)}
+          />
+        </div>
+      </div>
+
+      <div className="zg-grid zg-grid-5">
+        <StatCard title="Usuarios" value={users.length} />
+        <StatCard title="Activos" value={activeUsers} />
+        <StatCard
+          title={`Ingresos ${new Date().getFullYear()}`}
+          value={`$${currentYearRevenue.toLocaleString()}`}
+        />
+        <StatCard
+          title="Ingresos mes actual"
+          value={`$${currentMonthRevenue.toLocaleString()}`}
+        />
+        <StatCard
+          title="Deuda pendiente"
+          value={`$${totalDebt.toLocaleString()}`}
+          sub={`Mes seleccionado: $${monthRevenue.toLocaleString()}`}
         />
       </div>
-      
-      {/* Metrics Grid */}
-      <div className="dashboard-grid">
-        <div className="metric-card">
-          <h3>Total Usuarios</h3>
-          <span className="metric-value">{totalUsers}</span>
+
+      <div className="zg-grid zg-grid-2">
+        <div className="zg-card">
+          <div className="zg-card-title">Ingresos (últimos 12 meses)</div>
+          <div className="zg-chart">
+            <ResponsiveContainer width="100%" height={280}>
+              <LineChart
+                data={last12Revenue}
+                margin={{ top: 8, right: 12, left: 0, bottom: 0 }}
+              >
+                <CartesianGrid
+                  strokeDasharray="3 3"
+                  stroke="rgba(255,255,255,0.08)"
+                />
+                <XAxis
+                  dataKey="month"
+                  stroke="rgba(255,255,255,0.7)"
+                  tick={{ fontSize: 12 }}
+                />
+                <YAxis stroke="rgba(255,255,255,0.7)" tick={{ fontSize: 12 }} />
+                <Tooltip
+                  contentStyle={{
+                    background: "rgba(17,24,39,0.95)",
+                    border: "1px solid rgba(255,255,255,0.08)",
+                  }}
+                  labelStyle={{ color: "rgba(255,255,255,0.9)" }}
+                />
+                <Line
+                  type="monotone"
+                  dataKey="revenue"
+                  stroke="#60a5fa"
+                  strokeWidth={2}
+                  dot={false}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
         </div>
-        <div className="metric-card">
-          <h3>Usuarios Activos</h3>
-          <span className="metric-value">{activeUsers}</span>
-        </div>
-        <div className="metric-card">
-          <h3>Ingresos Año {new Date().getFullYear()}</h3>
-          <span className="metric-value">${currentYearRevenue.toLocaleString()}</span>
-        </div>
-        <div className="metric-card">
-          <h3>Ingresos Mes Actual</h3>
-          <span className="metric-value">${currentMonthRevenue.toLocaleString()}</span>
-        </div>
-        <div className="metric-card">
-          <h3>Deudas Pendientes</h3>
-          <span className="metric-value">${totalDebt.toLocaleString()}</span>
+
+        <div className="zg-card">
+          <div className="zg-card-title">Distribución por plan</div>
+          <div className="zg-chart">
+            <ResponsiveContainer width="100%" height={280}>
+              <PieChart>
+                <Pie
+                  data={planData}
+                  dataKey="value"
+                  nameKey="name"
+                  innerRadius={58}
+                  outerRadius={92}
+                  paddingAngle={3}
+                >
+                  {planData.map((entry) => (
+                    <Cell key={entry.name} fill={entry.color} />
+                  ))}
+                </Pie>
+                <Tooltip
+                  contentStyle={{
+                    background: "rgba(17,24,39,0.95)",
+                    border: "1px solid rgba(255,255,255,0.08)",
+                  }}
+                  labelStyle={{ color: "rgba(255,255,255,0.9)" }}
+                />
+                <Legend />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
         </div>
       </div>
 
-      {/* Alerts Panel */}
-      <div className="alerts-panel">
-        <h3>Sistema de Alertas</h3>
-        
-        {/* Próximos a Vencer */}
-        <div className="alert-category">
-          <div className="category-header" onClick={() => toggleSection('upcomingExpirations')}>
-            <h4>Próximos a Vencer (5 días)</h4>
-            <span className="toggle-icon">
-              {expandedSections.upcomingExpirations ? '▼' : '▶'}
-            </span>
+      <div className="zg-section-title">Notificaciones WhatsApp (hoy)</div>
+      <div className="zg-grid zg-grid-2">
+        <div>
+          <div className="zg-mini-title">Vencen en 3 días</div>
+          <UsersTable
+            rows={whatsappBuckets.expiringIn3}
+            getActionType={() => "pre_expiry_3"}
+            actionLabel="Enviar aviso"
+            emptyLabel="No hay usuarios en esta categoría."
+          />
+        </div>
+        <div>
+          <div className="zg-mini-title">Vencen hoy</div>
+          <UsersTable
+            rows={whatsappBuckets.expiringToday}
+            getActionType={() => "expiry"}
+            actionLabel="Enviar aviso"
+            emptyLabel="No hay usuarios en esta categoría."
+          />
+        </div>
+        <div>
+          <div className="zg-mini-title">Vencidos (día 1 a 5)</div>
+          <UsersTable
+            rows={whatsappBuckets.expiredDay1to5}
+            getActionType={(u) => `post_expiry_day_${u.daysSinceExpired}`}
+            actionLabel="Enviar recordatorio"
+            emptyLabel="No hay usuarios en esta categoría."
+          />
+        </div>
+        <div>
+          <div className="zg-mini-title">Vencidos (día 6 a 15)</div>
+          <UsersTable
+            rows={whatsappBuckets.expiredDay6to15}
+            getActionType={(u) => `post_expiry_day_${u.daysSinceExpired}`}
+            actionLabel="Enviar mensaje"
+            emptyLabel="No hay usuarios en esta categoría."
+          />
+        </div>
+      </div>
+
+      <div className="zg-section-title">Cumpleaños próximos (30 días)</div>
+      <div className="zg-card">
+        <div className="zg-table">
+          <div className="zg-table-head">
+            <div>Usuario</div>
+            <div>Teléfono</div>
+            <div>Fecha</div>
+            <div></div>
           </div>
-          {expandedSections.upcomingExpirations && (
-            <div className="category-content">
-              {upcomingExpirations.length > 0 ? upcomingExpirations.map(u => (
-                <div key={u.id} className="alert-item">
-                  <Link to={`/users/${u.id}`} className="user-name">{u.nombre}</Link>
-                  <span className="alert-detail">Vence: {u.fechaVencimiento}</span>
+          {upcomingBirthdays.length ? (
+            upcomingBirthdays.map((x) => (
+              <div className="zg-table-row" key={x.user.id}>
+                <div className="zg-user">
+                  <Link to={`/users/${x.user.id}`} className="zg-user-name">
+                    {x.user.nombre}
+                  </Link>
+                  <div className="zg-user-sub">Cumpleaños</div>
                 </div>
-              )) : <p className="no-alerts">Ningún usuario próximo a vencer.</p>}
-            </div>
+                <div className="zg-mono">{x.user.telefono || "-"}</div>
+                <div className="zg-mono">
+                  {x.nextBirthday.toISOString().split("T")[0]}
+                </div>
+                <div></div>
+              </div>
+            ))
+          ) : (
+            <div className="zg-empty">No hay cumpleaños próximos.</div>
           )}
         </div>
-        
-        {/* Usuarios Vencidos */}
-        <div className="alert-category">
-          <div className="category-header" onClick={() => toggleSection('expiredUsers')}>
-            <h4>Usuarios Vencidos</h4>
-            <span className="toggle-icon">
-              {expandedSections.expiredUsers ? '▼' : '▶'}
-            </span>
-          </div>
-          {expandedSections.expiredUsers && (
-            <div className="category-content">
-              {expiredUsers.length > 0 ? expiredUsers.map(u => (
-                <div key={u.id} className="alert-item">
-                  <Link to={`/users/${u.id}`} className="user-name">{u.nombre}</Link>
-                  <span className="alert-detail">Venció: {u.fechaVencimiento}</span>
-                </div>
-              )) : <p className="no-alerts">Ningún usuario vencido.</p>}
-            </div>
-          )}
-        </div>
-        
-        {/* Usuarios con Deuda */}
-        <div className="alert-category">
-          <div className="category-header" onClick={() => toggleSection('usersWithDebt')}>
-            <h4>Usuarios con Deuda</h4>
-            <span className="toggle-icon">
-              {expandedSections.usersWithDebt ? '▼' : '▶'}
-            </span>
-          </div>
-          {expandedSections.usersWithDebt && (
-            <div className="category-content">
-              {usersWithDebt.length > 0 ? usersWithDebt.map(u => (
-                <div key={u.id} className="alert-item">
-                  <Link to={`/users/${u.id}`} className="user-name">{u.nombre}</Link>
-                  <span className="alert-detail">Debe: ${u.debe.toLocaleString()}</span>
-                </div>
-              )) : <p className="no-alerts">Ningún usuario con deudas.</p>}
-            </div>
-          )}
-        </div>
       </div>
-
-      {/* Upcoming Birthdays */}
-      <div className="birthdays-panel">
-        <div className="category-header" onClick={() => toggleSection('upcomingBirthdays')}>
-          <h3>Próximos Cumpleaños (30 días)</h3>
-          <span className="toggle-icon">
-            {expandedSections.upcomingBirthdays ? '▼' : '▶'}
-          </span>
-        </div>
-        {expandedSections.upcomingBirthdays && (
-          <div className="category-content">
-            {upcomingBirthdays.length > 0 ? upcomingBirthdays.map(u => (
-                <div key={u.id} className="birthday-item">
-                    <Link to={`/users/${u.id}`} className="user-name">{u.nombre}</Link>
-                    <span className="birthday-detail">Cumple: {u.cumpleanos}</span>
-                </div>
-            )) : <p className="no-birthdays">No hay cumpleaños próximos.</p>}
-          </div>
-        )}
-      </div>
-
-      {/* Plan Distribution with Chart */}
-      <div className="plans-panel">
-        <h3>Distribución por Planes</h3>
-        <div className="plan-distribution">
-          <div className="plan-item">
-            <span>{planDistribution.Quincena}</span>
-            <p>Quincena</p>
-          </div>
-          <div className="plan-item">
-            <span>{planDistribution.Mensualidad}</span>
-            <p>Mensualidad</p>
-          </div>
-          <div className="plan-item">
-            <span>{planDistribution.Tiquetera}</span>
-            <p>Tiquetera</p>
-          </div>
-        </div>
-        
-        {/* Gráfico de barras simple */}
-        <div className="bar-chart-container">
-          <h4>Visualización de Distribución</h4>
-          <div className="bar-chart">
-            {Object.entries(planDistribution).map(([plan, count]) => {
-              const maxCount = Math.max(...Object.values(planDistribution));
-              const percentage = maxCount > 0 ? (count / maxCount) * 100 : 0;
-              return (
-                <div key={plan} className="bar-item">
-                  <div className="bar-label">{plan}</div>
-                  <div className="bar">
-                    <div 
-                      className="bar-fill" 
-                      style={{ width: `${percentage}%`, backgroundColor: getPlanColor(plan) }}
-                    ></div>
-                  </div>
-                  <div className="bar-value">{count}</div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      </div>
-
-      {/* Monthly Revenue History with Chart */}
-      <div className="monthly-revenue-panel alerts-panel">
-        <div className="category-header" onClick={() => toggleSection('monthlyRevenue')}>
-          <h3>Historial Mensual de Ingresos</h3>
-          <span className="toggle-icon">
-            {expandedSections.monthlyRevenue ? '▼' : '▶'}
-          </span>
-        </div>
-        {expandedSections.monthlyRevenue && (
-          <div className="category-content">
-            {monthlyRevenueHistory.length > 0 ? (
-              <>
-                <table className="monthly-revenue-table table">
-                  <thead>
-                    <tr>
-                      <th>Mes</th>
-                      <th>Ingresos</th>
-                      <th>Tendencia</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {monthlyRevenueHistory.map((data, index) => {
-                      const prevRevenue = index < monthlyRevenueHistory.length - 1 
-                        ? monthlyRevenueHistory[index + 1].revenue 
-                        : data.revenue;
-                      const trend = data.revenue > prevRevenue ? '📈' : data.revenue < prevRevenue ? '📉' : '➡️';
-                      return (
-                        <tr key={data.month}>
-                          <td>{data.month}</td>
-                          <td>${data.revenue.toLocaleString()}</td>
-                          <td>{trend}</td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-                
-                {/* Gráfico de líneas simple */}
-                <div className="line-chart-container">
-                  <h4>Evolución de Ingresos</h4>
-                  <div className="line-chart">
-                    {monthlyRevenueHistory.slice(0, 12).reverse().map((data, index, arr) => {
-                      const maxRevenue = Math.max(...arr.map(d => d.revenue));
-                      const minRevenue = Math.min(...arr.map(d => d.revenue));
-                      const range = maxRevenue - minRevenue;
-                      const percentage = range > 0 ? ((data.revenue - minRevenue) / range) * 100 : 50;
-                      return (
-                        <div key={data.month} className="line-point" style={{ left: `${(index / (arr.length - 1 || 1)) * 100}%`, bottom: `${percentage}%` }}>
-                          <div className="point-tooltip">
-                            {data.month}: ${data.revenue.toLocaleString()}
-                          </div>
-                        </div>
-                      );
-                    })}
-                    <div className="line"></div>
-                  </div>
-                  <div className="chart-labels">
-                    <span>Más antiguo</span>
-                    <span>Más reciente</span>
-                  </div>
-                </div>
-              </>
-            ) : (
-              <p className="no-records">No hay registros de ingresos mensuales.</p>
-            )}
-          </div>
-        )}
-      </div>
-
-      {/* Backup Manager 
-      <BackupManager />
-      */}
     </div>
   );
 };
