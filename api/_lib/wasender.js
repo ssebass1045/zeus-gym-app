@@ -20,7 +20,7 @@ const sendTextMessage = async ({ to, text }) => {
   const res = await fetch(`${WASENDER_BASE_URL}/api/send-message`, {
     method: "POST",
     headers: {
-      Authorization: `Bearer token ${apiKey}`,
+      Authorization: `Bearer ${apiKey}`,
       "Content-Type": "application/json",
     },
     body: JSON.stringify({ to, text }),
