@@ -1,10 +1,15 @@
 const { db } = require("./firebaseAdmin");
-const { normalizeToE164CO, sendTextMessage } = require("./wasender");
+const {
+  normalizeToE164CO,
+  sendTextMessage,
+  getConnectionState,
+} = require("./wasender");
 
 const TIME_ZONE = process.env.NOTIFICATIONS_TIME_ZONE || "America/Bogota";
 const PAYMENT_NEQUI = process.env.PAYMENT_NEQUI || "3105302619";
 const PAYMENT_BANCOLOMBIA = process.env.PAYMENT_BANCOLOMBIA || "95950171988";
 const GYM_NAME = process.env.GYM_NAME || "ZEUS GYM";
+const DEVELOPER_TEST_PHONE = process.env.DEVELOPER_TEST_PHONE || "3105302619";
 
 const formatDateCO = (isoDate) => {
   if (!isoDate) return "";
@@ -294,10 +299,52 @@ const sendNotificationForUser = async ({ userId, type, dayKey }) => {
   });
 };
 
+const sendDeveloperTestNotification = async () => {
+  const stateResponse = await getConnectionState();
+  const state =
+    stateResponse?.instance?.state ||
+    stateResponse?.state ||
+    stateResponse?.status ||
+    "unknown";
+
+  if (String(state).toLowerCase() !== "open") {
+    const err = new Error(
+      `WhatsApp no está conectado. Estado actual: ${state}`,
+    );
+    err.status = 409;
+    err.response = stateResponse;
+    throw err;
+  }
+
+  const now = new Date().toLocaleString("es-CO", {
+    timeZone: TIME_ZONE,
+    dateStyle: "short",
+    timeStyle: "medium",
+  });
+  const text = [
+    `${GYM_NAME}: prueba de WhatsApp exitosa.`,
+    `Instancia: ${process.env.EVOLUTION_INSTANCE_NAME || "sin-configurar"}.`,
+    `Fecha: ${now}.`,
+  ].join(" ");
+
+  const response = await sendTextMessage({
+    to: DEVELOPER_TEST_PHONE,
+    text,
+  });
+
+  return {
+    sent: true,
+    to: normalizeToE164CO(DEVELOPER_TEST_PHONE),
+    connectionState: state,
+    response,
+  };
+};
+
 module.exports = {
   runDailyNotifications,
   sendRenewalNotification,
   sendWelcomeNotification,
   sendMeasurementNotification,
   sendNotificationForUser,
+  sendDeveloperTestNotification,
 };

@@ -2,8 +2,17 @@
 .zg-page {
   padding: 24px;
   color: rgba(255, 255, 255, 0.92);
-  background: radial-gradient(1200px 700px at 20% 0%, rgba(96, 165, 250, 0.22), transparent 55%),
-    radial-gradient(900px 600px at 80% 10%, rgba(52, 211, 153, 0.16), transparent 55%),
+  background:
+    radial-gradient(
+      1200px 700px at 20% 0%,
+      rgba(96, 165, 250, 0.22),
+      transparent 55%
+    ),
+    radial-gradient(
+      900px 600px at 80% 10%,
+      rgba(52, 211, 153, 0.16),
+      transparent 55%
+    ),
     linear-gradient(180deg, #05070f 0%, #070b17 55%, #05070f 100%);
   min-height: calc(100vh - 72px);
 }
@@ -84,7 +93,11 @@
   content: "";
   position: absolute;
   inset: -2px;
-  background: radial-gradient(400px 120px at 20% 0%, rgba(96, 165, 250, 0.26), transparent 60%);
+  background: radial-gradient(
+    400px 120px at 20% 0%,
+    rgba(96, 165, 250, 0.26),
+    transparent 60%
+  );
   opacity: 0.8;
   pointer-events: none;
 }
@@ -127,6 +140,39 @@
   font-weight: 700;
   color: rgba(255, 255, 255, 0.74);
   letter-spacing: 0.4px;
+}
+
+.zg-section-header {
+  margin-top: 18px;
+  margin-bottom: 10px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.zg-section-header .zg-section-title {
+  margin: 0;
+}
+
+.zg-inline-status {
+  margin-bottom: 10px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  font-size: 13px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.zg-inline-status-success {
+  background: rgba(16, 185, 129, 0.14);
+  color: #a7f3d0;
+  border-color: rgba(16, 185, 129, 0.28);
+}
+
+.zg-inline-status-error {
+  background: rgba(239, 68, 68, 0.14);
+  color: #fecaca;
+  border-color: rgba(239, 68, 68, 0.28);
 }
 
 .zg-mini-title {
@@ -183,7 +229,9 @@
 
 .zg-mono {
   font-variant-numeric: tabular-nums;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-family:
+    ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono",
+    "Courier New", monospace;
   color: rgba(255, 255, 255, 0.78);
   font-size: 13px;
 }
@@ -209,7 +257,11 @@
 }
 
 .zg-btn-primary {
-  background: linear-gradient(135deg, rgba(96, 165, 250, 0.9), rgba(59, 130, 246, 0.9));
+  background: linear-gradient(
+    135deg,
+    rgba(96, 165, 250, 0.9),
+    rgba(59, 130, 246, 0.9)
+  );
   border-color: rgba(59, 130, 246, 0.5);
 }
 
@@ -233,6 +285,10 @@
     padding: 16px;
   }
   .zg-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .zg-section-header {
     flex-direction: column;
     align-items: flex-start;
   }

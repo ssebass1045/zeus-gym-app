@@ -1,5 +1,19 @@
-const WASENDER_BASE_URL =
-  process.env.WASENDER_BASE_URL || "https://www.wasenderapi.com";
+const EVOLUTION_BASE_URL = (
+  process.env.EVOLUTION_API_URL ||
+  process.env.WASENDER_BASE_URL ||
+  ""
+).replace(/\/+$/, "");
+
+const getEvolutionApiKey = () =>
+  process.env.EVOLUTION_API_KEY || process.env.WASENDER_SESSION_API_KEY;
+
+const getEvolutionInstanceName = () => process.env.EVOLUTION_INSTANCE_NAME;
+
+const normalizeToEvolutionNumber = (rawPhone) => {
+  const e164 = normalizeToE164CO(rawPhone);
+  if (!e164) return null;
+  return e164.replace(/\D/g, "");
+};
 
 const normalizeToE164CO = (rawPhone) => {
   if (!rawPhone) return null;
@@ -13,18 +27,30 @@ const normalizeToE164CO = (rawPhone) => {
   return null;
 };
 
-const sendTextMessage = async ({ to, text }) => {
-  const apiKey = process.env.WASENDER_SESSION_API_KEY;
-  if (!apiKey) throw new Error("Missing WASENDER_SESSION_API_KEY.");
+const validateEvolutionConfig = ({ requireNumber } = {}) => {
+  const apiKey = getEvolutionApiKey();
+  const instanceName = getEvolutionInstanceName();
+  if (!EVOLUTION_BASE_URL) throw new Error("Missing EVOLUTION_API_URL.");
+  if (!apiKey) throw new Error("Missing EVOLUTION_API_KEY.");
+  if (!instanceName) throw new Error("Missing EVOLUTION_INSTANCE_NAME.");
+  if (requireNumber && !requireNumber.number)
+    throw new Error("Invalid WhatsApp number.");
+  return { apiKey, instanceName };
+};
 
-  const res = await fetch(`${WASENDER_BASE_URL}/api/send-message`, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
+const getConnectionState = async () => {
+  const { apiKey, instanceName } = validateEvolutionConfig();
+  const res = await fetch(
+    `${EVOLUTION_BASE_URL}/instance/connectionState/${encodeURIComponent(
+      instanceName,
+    )}`,
+    {
+      method: "GET",
+      headers: {
+        apikey: apiKey,
+      },
     },
-    body: JSON.stringify({ to, text }),
-  });
+  );
 
   const bodyText = await res.text();
   let bodyJson = null;
@@ -35,7 +61,7 @@ const sendTextMessage = async ({ to, text }) => {
   }
 
   if (!res.ok) {
-    const err = new Error(`Wasender send-message failed: ${res.status}`);
+    const err = new Error(`Evolution connectionState failed: ${res.status}`);
     err.status = res.status;
     err.response = bodyJson;
     throw err;
@@ -44,4 +70,52 @@ const sendTextMessage = async ({ to, text }) => {
   return bodyJson;
 };
 
-module.exports = { normalizeToE164CO, sendTextMessage };
+const sendTextMessage = async ({ to, text }) => {
+  const number = normalizeToEvolutionNumber(to);
+  const { apiKey, instanceName } = validateEvolutionConfig({
+    requireNumber: { number },
+  });
+  if (!number) throw new Error("Invalid WhatsApp number.");
+
+  const res = await fetch(
+    `${EVOLUTION_BASE_URL}/message/sendText/${encodeURIComponent(
+      instanceName,
+    )}`,
+    {
+      method: "POST",
+      headers: {
+        apikey: apiKey,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        number,
+        text,
+        delay: 1200,
+        linkPreview: false,
+      }),
+    },
+  );
+
+  const bodyText = await res.text();
+  let bodyJson = null;
+  try {
+    bodyJson = JSON.parse(bodyText);
+  } catch {
+    bodyJson = { raw: bodyText };
+  }
+
+  if (!res.ok) {
+    const err = new Error(`Evolution sendText failed: ${res.status}`);
+    err.status = res.status;
+    err.response = bodyJson;
+    throw err;
+  }
+
+  return bodyJson;
+};
+
+module.exports = {
+  normalizeToE164CO,
+  sendTextMessage,
+  getConnectionState,
+};

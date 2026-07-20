@@ -107,6 +107,11 @@ const Dashboard = () => {
     new Date().toISOString().slice(0, 7),
   );
   const [sending, setSending] = useState({});
+  const [healthCheck, setHealthCheck] = useState({
+    loading: false,
+    tone: "",
+    message: "",
+  });
 
   const today = startOfDay(new Date());
 
@@ -247,6 +252,55 @@ const Dashboard = () => {
     }
   };
 
+  const verifyWhatsAppHealth = async () => {
+    setHealthCheck({
+      loading: true,
+      tone: "",
+      message: "Verificando conexión y enviando mensaje de prueba...",
+    });
+    try {
+      const token = await auth.currentUser?.getIdToken();
+      if (!token) {
+        setHealthCheck({
+          loading: false,
+          tone: "error",
+          message: "Debes iniciar sesión para verificar WhatsApp.",
+        });
+        return;
+      }
+
+      const res = await fetch("/api/notifications/health-check", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      const data = await res.json();
+
+      if (!res.ok || !data.ok) {
+        setHealthCheck({
+          loading: false,
+          tone: "error",
+          message: data.error || "No se pudo validar la conexión de WhatsApp.",
+        });
+        return;
+      }
+
+      setHealthCheck({
+        loading: false,
+        tone: "success",
+        message: `WhatsApp OK. Mensaje de prueba enviado a ${data.result?.to || "3105302619"}. Estado: ${data.result?.connectionState || "open"}.`,
+      });
+    } catch (error) {
+      setHealthCheck({
+        loading: false,
+        tone: "error",
+        message: "No se pudo completar la verificación de WhatsApp.",
+      });
+    }
+  };
+
   const StatCard = ({ title, value, sub }) => (
     <div className="zg-card zg-stat">
       <div className="zg-stat-title">{title}</div>
@@ -255,12 +309,7 @@ const Dashboard = () => {
     </div>
   );
 
-  const UsersTable = ({
-    rows,
-    getActionType,
-    actionLabel,
-    emptyLabel,
-  }) => (
+  const UsersTable = ({ rows, getActionType, actionLabel, emptyLabel }) => (
     <div className="zg-card">
       <div className="zg-table">
         <div className="zg-table-head">
@@ -406,7 +455,27 @@ const Dashboard = () => {
         </div>
       </div>
 
-      <div className="zg-section-title">Notificaciones WhatsApp (hoy)</div>
+      <div className="zg-section-header">
+        <div className="zg-section-title">Notificaciones WhatsApp (hoy)</div>
+        <button
+          className="zg-btn zg-btn-primary"
+          onClick={verifyWhatsAppHealth}
+          disabled={healthCheck.loading}
+        >
+          {healthCheck.loading ? "Verificando WhatsApp..." : "Probar WhatsApp"}
+        </button>
+      </div>
+      {healthCheck.message ? (
+        <div
+          className={`zg-inline-status ${
+            healthCheck.tone === "error"
+              ? "zg-inline-status-error"
+              : "zg-inline-status-success"
+          }`}
+        >
+          {healthCheck.message}
+        </div>
+      ) : null}
       <div className="zg-grid zg-grid-2">
         <div>
           <div className="zg-mini-title">Vencen en 3 días</div>
