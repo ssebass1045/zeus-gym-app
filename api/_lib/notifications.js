@@ -47,73 +47,254 @@ const notificationsCollection = () => db.collection("whatsappNotifications");
 
 const buildDocId = ({ userId, type, dayKey }) => `${userId}_${type}_${dayKey}`;
 
+const getShortName = (user) => {
+  const fullName = user?.nombre ? String(user.nombre).trim() : "";
+  return fullName.split(/\s+/).filter(Boolean)[0] || "Hola";
+};
+
+const normalizeMonthDay = (isoDate) => {
+  if (!isoDate) return null;
+  const raw = String(isoDate).slice(0, 10);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(raw)) return null;
+  return raw.slice(5);
+};
+
+const isBirthdayToday = ({ user, todayIso }) =>
+  !!normalizeMonthDay(user?.cumpleanos) &&
+  normalizeMonthDay(user?.cumpleanos) === String(todayIso).slice(5);
+
+const prettifyMeasureKey = (key) => {
+  const labels = {
+    cuello: "Cuello",
+    brazo: "Brazo",
+    biceps: "Biceps",
+    pecho: "Pecho",
+    cintura: "Cintura",
+    cintura_bajo_ombligo: "Cintura baja",
+    gluteo: "Gluteo",
+    gluteo_cadera: "Gluteo / cadera",
+    pierna: "Pierna",
+  };
+  return labels[key] || key.replace(/_/g, " ");
+};
+
+const formatMeasureValue = (value) => {
+  const num = Number(value);
+  if (!Number.isFinite(num)) return null;
+  return `${num.toFixed(1)} cm`;
+};
+
+const buildPaymentLine = () =>
+  [
+    `Puedes pagar por Nequi al ${PAYMENT_NEQUI} o a Bancolombia Ahorros ${PAYMENT_BANCOLOMBIA}.`,
+    "Si haces el pago por ahi, puedes enviarnos el comprobante por este mismo WhatsApp.",
+    "Y si prefieres, tambien puedes pagar en efectivo directamente en el gimnasio 💪",
+  ].join(" ");
+
+const buildMeasurementSummary = (measurement) => {
+  const entries = Object.entries(measurement?.measures || {})
+    .map(([key, value]) => {
+      const formatted = formatMeasureValue(value);
+      if (!formatted) return null;
+      return `• ${prettifyMeasureKey(key)}: ${formatted}`;
+    })
+    .filter(Boolean);
+
+  if (!entries.length) return "";
+  return entries.join("\n");
+};
+
+const buildMeasurementChanges = ({ measurement, previousMeasurement }) => {
+  if (!measurement?.measures || !previousMeasurement?.measures) return "";
+
+  const changes = Object.keys(measurement.measures)
+    .map((key) => {
+      const current = Number(measurement.measures[key]);
+      const previous = Number(previousMeasurement.measures[key]);
+      if (!Number.isFinite(current) || !Number.isFinite(previous)) return null;
+      const diff = Number((current - previous).toFixed(1));
+      if (diff === 0) return null;
+      const sign = diff > 0 ? "+" : "";
+      return `• ${prettifyMeasureKey(key)}: ${sign}${diff.toFixed(1)} cm vs. medicion anterior`;
+    })
+    .filter(Boolean)
+    .slice(0, 3);
+
+  if (!changes.length) return "";
+  return changes.join("\n");
+};
+
+const getMeasurementContext = async ({ userId, date }) => {
+  const snap = await db
+    .collection("bodyCompositions")
+    .where("userId", "==", String(userId))
+    .get();
+
+  const all = snap.docs
+    .map((doc) => ({ id: doc.id, ...doc.data() }))
+    .filter((item) => item?.date)
+    .sort((a, b) => String(b.date).localeCompare(String(a.date)));
+
+  const measurement =
+    all.find((item) => item.date === date) ||
+    all.find((item) => item.date <= date) ||
+    all[0] ||
+    null;
+
+  if (!measurement) return null;
+
+  const previousMeasurement =
+    all.find(
+      (item) =>
+        item.id !== measurement.id &&
+        String(item.date) < String(measurement.date),
+    ) || null;
+
+  return { measurement, previousMeasurement };
+};
+
 const shouldSendTypeForUser = ({ user, todayIso }) => {
   if (!user) return [];
-  if (user.plan === "Tiquetera") return [];
-  if (!user.fechaVencimiento) return [];
+
+  const types = [];
+
+  if (isBirthdayToday({ user, todayIso })) {
+    types.push({
+      type: "birthday",
+      dayKey: todayIso,
+      meta: {},
+    });
+  }
+
+  if (!user.fechaVencimiento) return types;
 
   const expiryIso = String(user.fechaVencimiento).slice(0, 10);
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(expiryIso)) return [];
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(expiryIso)) return types;
 
   const daysToExpiry = diffDays(todayIso, expiryIso);
 
-  const types = [];
-  if (daysToExpiry === 3)
+  if (daysToExpiry === 3) {
     types.push({
       type: "pre_expiry_3",
       dayKey: todayIso,
       meta: { daysToExpiry },
     });
-  if (daysToExpiry === 0)
-    types.push({ type: "expiry", dayKey: todayIso, meta: { daysToExpiry } });
+  }
+  if (daysToExpiry === 0) {
+    types.push({
+      type: "expiry",
+      dayKey: todayIso,
+      meta: { daysToExpiry },
+    });
+  }
 
   const daysSinceExpired = -daysToExpiry;
-  if (daysSinceExpired >= 1 && daysSinceExpired <= 5) {
+  const postExpiryReminderDays = [2, 5, 10, 15];
+  if (postExpiryReminderDays.includes(daysSinceExpired)) {
     types.push({
       type: `post_expiry_day_${daysSinceExpired}`,
       dayKey: todayIso,
       meta: { daysSinceExpired },
     });
   }
-  if (daysSinceExpired >= 6 && daysSinceExpired <= 15) {
-    types.push({
-      type: `post_expiry_day_${daysSinceExpired}`,
-      dayKey: todayIso,
-      meta: { daysSinceExpired },
-    });
-  }
+
   return types;
 };
 
-const buildMessage = ({ user, notifType }) => {
-  const name = user?.nombre ? String(user.nombre).trim() : "Hola";
+const buildMessage = ({ user, notifType, context = {} }) => {
+  const name = getShortName(user);
   const expiry = formatDateCO(user?.fechaVencimiento);
-  const payLine = `Puedes pagar por Nequi ${PAYMENT_NEQUI} o Bancolombia Ahorros ${PAYMENT_BANCOLOMBIA} y enviarnos el comprobante por este WhatsApp.`;
+  const paymentLine = buildPaymentLine();
+  const measurementDate = formatDateCO(context?.measurement?.date);
+  const measurementSummary = buildMeasurementSummary(context?.measurement);
+  const measurementChanges = buildMeasurementChanges(context);
 
   if (notifType === "welcome") {
     const plan = user?.plan ? String(user.plan) : "tu plan";
-    return `${name}, bienvenid@ a ${GYM_NAME}. Quedaste registrad@ con ${plan} y tu vencimiento es ${expiry}. ¡Vamos con toda!`;
+    return [
+      `Hola ${name} 👋 Bienvenid@ a ${GYM_NAME}.`,
+      `Nos alegra mucho tenerte con nosotros. Quedaste registrad@ con el plan ${plan} y tu fecha de vencimiento es ${expiry}.`,
+      "Vamos paso a paso, con disciplina y buena energia. Aqui estamos para ayudarte a mejorar cada dia 🔥",
+    ].join(" ");
   }
+
   if (notifType === "measurement") {
-    return `${name}, registramos tu medición en ${GYM_NAME}. Sigue así, la constancia lo es todo.`;
+    return [
+      `Hola ${name} 📏 Ya registramos tu medicion de ${measurementDate || "hoy"} en ${GYM_NAME}.`,
+      measurementSummary
+        ? `Estas son tus medidas:\n${measurementSummary}`
+        : "Tu medicion ya quedo guardada en el sistema.",
+      measurementChanges
+        ? `\n\nCambios frente a tu registro anterior:\n${measurementChanges}`
+        : "",
+      "\n\nSigue asi, cada pequeño avance cuenta y la constancia siempre termina dando resultado 💪",
+    ].join("");
   }
+
+  if (notifType === "birthday") {
+    return [
+      `Feliz cumpleaños, ${name}! 🎉🎂`,
+      `De parte de todo el equipo de ${GYM_NAME}, te deseamos un dia lleno de alegria, salud y muchas bendiciones.`,
+      "Gracias por hacer parte de esta familia. Que este nuevo año te traiga mucha fuerza, disciplina y metas cumplidas. Aqui seguimos contigo, entrenando con toda 💙🔥",
+    ].join(" ");
+  }
+
   if (notifType === "pre_expiry_3") {
-    return `${name}, tu membresía en ${GYM_NAME} vence en 3 días (fecha ${expiry}). ${payLine}`;
+    return [
+      `Hola ${name} 👋 Te recordamos con cariño que tu membresia en ${GYM_NAME} vence en 3 dias, el ${expiry}.`,
+      "Queremos ayudarte a que sigas en ritmo y no pierdas continuidad en tu proceso.",
+      paymentLine,
+    ].join(" ");
   }
+
   if (notifType === "expiry") {
-    return `${name}, tu membresía en ${GYM_NAME} vence hoy (${expiry}). ${payLine}`;
+    return [
+      `Hola ${name} 💪 Hoy vence tu membresia en ${GYM_NAME} (${expiry}).`,
+      "Si deseas renovarla hoy mismo, aqui te dejamos los medios de pago para que nos envies el comprobante y sigas entrenando sin pausa.",
+      paymentLine,
+    ].join(" ");
   }
+
   if (notifType.startsWith("post_expiry_day_")) {
     const day = Number(notifType.replace("post_expiry_day_", ""));
     if (day >= 1 && day <= 5) {
-      return `${name}, tu membresía en ${GYM_NAME} está vencida desde ${expiry}. ${payLine}`;
+      return [
+        `Hola ${name} 🌟 Queremos saludarte y recordarte que te extrañamos en ${GYM_NAME}.`,
+        `Tu membresia vencio el ${expiry}, pero lo mas importante es que no pierdas ese impulso que llevas.`,
+        "Si por ahora te queda mas facil ir entrenando y pagando el dia, tambien lo valoramos mucho. Lo importante es seguir sumando por tu salud y felicitarte por no rendirte 🙌",
+      ].join(" ");
     }
-    return `${name}, hace ${day} días venció tu membresía (${expiry}). ¿Hay algo en lo que podamos ayudarte para que vuelvas? Te esperamos con toda en ${GYM_NAME}.`;
+    return [
+      `Hola ${name} 💙 Pasamos por aqui para enviarte buena energia.`,
+      `Ya van ${day} dias desde el vencimiento de tu membresia (${expiry}), y queremos recordarte que siempre tendras las puertas abiertas en ${GYM_NAME}.`,
+      "Si has seguido viniendo poco a poco o pagando el dia, te felicitamos por tu disciplina. Y si aun no has podido volver, animo: retomar tambien cuenta. Lo importante es seguir creyendo en ti 🔥",
+    ].join(" ");
   }
+
   if (notifType === "renewal") {
-    return `${name}, tu membresía en ${GYM_NAME} fue renovada. Nuevo vencimiento: ${expiry}. Gracias por seguir entrenando con nosotros.`;
+    return [
+      `Hola ${name} 🙌 Tu membresia en ${GYM_NAME} ya fue renovada.`,
+      `Tu nuevo vencimiento es ${expiry}. Gracias por seguir apostandole a tu proceso y a tu bienestar.`,
+      "Vamos con toda por esta nueva etapa 💪",
+    ].join(" ");
   }
-  return `${name}, ${GYM_NAME}.`;
+
+  if (notifType === "tiquetera_attendance") {
+    const remaining = Number(context?.remainingDays);
+    const used = Number(context?.usedDays);
+    return [
+      `Hola ${name} ✅ Registramos tu asistencia de hoy en ${GYM_NAME}.`,
+      Number.isFinite(remaining)
+        ? `Te quedan ${remaining} dias disponibles en tu tiquetera${Number.isFinite(used) ? ` y llevas ${used} consumidos` : ""}.`
+        : "Tu asistencia ya quedo registrada correctamente.",
+      expiry ? `Recuerda que tu tiquetera vence el ${expiry}.` : "",
+      "Gracias por seguir firme con tu proceso. Cada entrenamiento suma y se nota. Vamos con toda 💪",
+    ]
+      .filter(Boolean)
+      .join(" ");
+  }
+
+  return `Hola ${name} � Te escribe ${GYM_NAME}.`;
 };
 
 const upsertLog = async ({ docId, data }) => {
@@ -122,7 +303,13 @@ const upsertLog = async ({ docId, data }) => {
   return ref;
 };
 
-const sendAndLog = async ({ user, notifType, dayKey, trigger }) => {
+const sendAndLog = async ({
+  user,
+  notifType,
+  dayKey,
+  trigger,
+  context = {},
+}) => {
   const userId = user.id;
   const phoneE164 = normalizeToE164CO(user.telefono);
   if (!phoneE164) {
@@ -136,7 +323,7 @@ const sendAndLog = async ({ user, notifType, dayKey, trigger }) => {
     return { skipped: true, reason: "already_sent" };
   }
 
-  const text = buildMessage({ user, notifType });
+  const text = buildMessage({ user, notifType, context });
   const base = {
     userId,
     telefono: phoneE164,
@@ -145,6 +332,7 @@ const sendAndLog = async ({ user, notifType, dayKey, trigger }) => {
     trigger,
     plan: user.plan || null,
     fechaVencimiento: user.fechaVencimiento || null,
+    cumpleanos: user.cumpleanos || null,
     nombre: user.nombre || null,
     updatedAt: new Date().toISOString(),
   };
@@ -162,6 +350,7 @@ const sendAndLog = async ({ user, notifType, dayKey, trigger }) => {
         status: "sent",
         sentAt: new Date().toISOString(),
         response,
+        preview: text,
       },
     });
     return { sent: true, docId };
@@ -172,6 +361,7 @@ const sendAndLog = async ({ user, notifType, dayKey, trigger }) => {
         ...base,
         attempts,
         status: "error",
+        preview: text,
         error: {
           message: error.message,
           status: error.status || null,
@@ -231,15 +421,19 @@ const runDailyNotifications = async ({ limit = 200 } = {}) => {
   };
 };
 
-const sendRenewalNotification = async ({ userId }) => {
-  const todayIso = getTodayIsoCO();
+const getUserById = async (userId) => {
   const userDoc = await db.collection("users").doc(String(userId)).get();
   if (!userDoc.exists) {
     const err = new Error("User not found");
     err.status = 404;
     throw err;
   }
-  const user = { id: userDoc.id, ...userDoc.data() };
+  return { id: userDoc.id, ...userDoc.data() };
+};
+
+const sendRenewalNotification = async ({ userId }) => {
+  const todayIso = getTodayIsoCO();
+  const user = await getUserById(userId);
   return sendAndLog({
     user,
     notifType: "renewal",
@@ -250,13 +444,7 @@ const sendRenewalNotification = async ({ userId }) => {
 
 const sendWelcomeNotification = async ({ userId }) => {
   const todayIso = getTodayIsoCO();
-  const userDoc = await db.collection("users").doc(String(userId)).get();
-  if (!userDoc.exists) {
-    const err = new Error("User not found");
-    err.status = 404;
-    throw err;
-  }
-  const user = { id: userDoc.id, ...userDoc.data() };
+  const user = await getUserById(userId);
   return sendAndLog({
     user,
     notifType: "welcome",
@@ -267,35 +455,52 @@ const sendWelcomeNotification = async ({ userId }) => {
 
 const sendMeasurementNotification = async ({ userId, date }) => {
   const dayKey = date || getTodayIsoCO();
-  const userDoc = await db.collection("users").doc(String(userId)).get();
-  if (!userDoc.exists) {
-    const err = new Error("User not found");
-    err.status = 404;
-    throw err;
-  }
-  const user = { id: userDoc.id, ...userDoc.data() };
+  const user = await getUserById(userId);
+  const context = await getMeasurementContext({ userId, date: dayKey });
   return sendAndLog({
     user,
     notifType: "measurement",
     dayKey,
     trigger: "measurement",
+    context,
   });
 };
 
 const sendNotificationForUser = async ({ userId, type, dayKey }) => {
   const todayIso = getTodayIsoCO();
-  const userDoc = await db.collection("users").doc(String(userId)).get();
-  if (!userDoc.exists) {
-    const err = new Error("User not found");
-    err.status = 404;
-    throw err;
-  }
-  const user = { id: userDoc.id, ...userDoc.data() };
+  const user = await getUserById(userId);
+  const finalDayKey = dayKey || todayIso;
+  const context =
+    type === "measurement"
+      ? await getMeasurementContext({ userId, date: finalDayKey })
+      : {};
+
   return sendAndLog({
     user,
     notifType: type,
-    dayKey: dayKey || todayIso,
+    dayKey: finalDayKey,
     trigger: "manual",
+    context,
+  });
+};
+
+const sendTiqueteraAttendanceNotification = async ({
+  userId,
+  remainingDays,
+  usedDays,
+  date,
+}) => {
+  const dayKey = date || getTodayIsoCO();
+  const user = await getUserById(userId);
+  return sendAndLog({
+    user,
+    notifType: "tiquetera_attendance",
+    dayKey,
+    trigger: "attendance",
+    context: {
+      remainingDays,
+      usedDays,
+    },
   });
 };
 
@@ -322,7 +527,7 @@ const sendDeveloperTestNotification = async () => {
     timeStyle: "medium",
   });
   const text = [
-    `${GYM_NAME}: prueba de WhatsApp exitosa.`,
+    `Hola 👋 Esta es una prueba de WhatsApp desde ${GYM_NAME}.`,
     `Instancia: ${process.env.EVOLUTION_INSTANCE_NAME || "sin-configurar"}.`,
     `Fecha: ${now}.`,
   ].join(" ");
@@ -346,5 +551,6 @@ module.exports = {
   sendWelcomeNotification,
   sendMeasurementNotification,
   sendNotificationForUser,
+  sendTiqueteraAttendanceNotification,
   sendDeveloperTestNotification,
 };

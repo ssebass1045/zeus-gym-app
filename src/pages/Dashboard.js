@@ -152,9 +152,9 @@ const Dashboard = () => {
   const activeUsers = useMemo(() => {
     return users.filter((u) => {
       if (toAmount(u.debe) > 0) return false;
-      if (u.plan === "Tiquetera") return (u.diasHabiles || 0) < 15;
       const exp = new Date(u.fechaVencimiento);
-      if (Number.isNaN(exp.getTime())) return false;
+      if (u.plan === "Tiquetera" && (u.diasHabiles || 0) >= 15) return false;
+      if (Number.isNaN(exp.getTime())) return u.plan === "Tiquetera";
       return startOfDay(exp) >= today;
     }).length;
   }, [users, today]);
@@ -192,7 +192,6 @@ const Dashboard = () => {
     const expiredDay6to15 = [];
 
     users.forEach((u) => {
-      if (u.plan === "Tiquetera") return;
       if (!u.fechaVencimiento) return;
       const exp = new Date(u.fechaVencimiento);
       if (Number.isNaN(exp.getTime())) return;
@@ -279,10 +278,21 @@ const Dashboard = () => {
       const data = await res.json();
 
       if (!res.ok || !data.ok) {
+        const details =
+          data.response?.response?.message?.join?.(" | ") ||
+          data.response?.message?.join?.(" | ") ||
+          data.response?.response?.message ||
+          data.response?.message ||
+          "";
         setHealthCheck({
           loading: false,
           tone: "error",
-          message: data.error || "No se pudo validar la conexión de WhatsApp.",
+          message: [
+            data.error || "No se pudo validar la conexión de WhatsApp.",
+            details,
+          ]
+            .filter(Boolean)
+            .join(" "),
         });
         return;
       }

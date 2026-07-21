@@ -7,7 +7,7 @@
   min-height: 100vh;
   /* Fondo con gradiente sutil y moderno */
   background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
-  font-family: 'Roboto', sans-serif; /* Asegura una fuente consistente */
+  font-family: "Roboto", sans-serif; /* Asegura una fuente consistente */
 }
 
 .login-container {
@@ -36,11 +36,16 @@
 
 /* Estilo para el logo */
 .login-logo {
-  font-size: 3.5rem;
-  line-height: 1;
   margin-bottom: 1rem;
-  color: #f5d142; /* Color amarillo de tu tema */
-  text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.login-logo img {
+  width: 132px;
+  height: 132px;
+  object-fit: cover;
+  border-radius: 50%;
+  border: 4px solid rgba(34, 86, 112, 0.14);
+  box-shadow: 0 12px 30px rgba(34, 86, 112, 0.18);
 }
 
 .login-container h2 {
@@ -75,7 +80,9 @@
   border: 1px solid #ccc;
   border-radius: 8px; /* Bordes más redondeados */
   font-size: 1rem;
-  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+  transition:
+    border-color 0.3s ease,
+    box-shadow 0.3s ease;
 }
 
 /* Efecto de foco en los inputs */
@@ -85,7 +92,8 @@
   box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.25);
 }
 
-.login-button { /* Renombramos para evitar conflictos */
+.login-button {
+  /* Renombramos para evitar conflictos */
   width: 100%;
   padding: 0.9rem;
   border: none;
@@ -95,7 +103,9 @@
   font-size: 1.1rem;
   font-weight: bold;
   cursor: pointer;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
   margin-top: 1rem;
   text-transform: uppercase;
   letter-spacing: 0.5px;

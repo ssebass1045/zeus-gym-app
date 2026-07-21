@@ -1,6 +1,6 @@
 import React, { useContext, useState } from "react"; // <-- Añadir useState al import
 import { BrowserRouter as Router, Route, Routes, Link } from "react-router-dom";
-import { DataProvider, DataContext } from './contexts/DataContext';
+import { DataProvider, DataContext } from "./contexts/DataContext";
 import Dashboard from "./pages/Dashboard";
 import Users from "./pages/Users";
 import Payments from "./pages/Payments";
@@ -17,7 +17,14 @@ function App() {
   // 1. Mientras se verifica si el usuario está autenticado, mostramos un mensaje de carga
   if (loading) {
     return (
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          height: "100vh",
+        }}
+      >
         <h2>Cargando...</h2>
       </div>
     );
@@ -39,15 +46,22 @@ function App() {
     <Router>
       <div className="app">
         <header className="header">
-          <h1>ZEUS GYM</h1>
-          <button 
+          <div className="header-brand">
+            <img
+              src="/zeus_logo.jpeg"
+              alt="Logo ZEUS GYM"
+              className="header-logo"
+            />
+            <h1>ZEUS GYM</h1>
+          </div>
+          <button
             className="mobile-menu-button"
             onClick={() => setIsMenuOpen(!isMenuOpen)}
           >
             ☰
           </button>
           <nav>
-            <ul className={`nav-links ${isMenuOpen ? 'show' : ''}`}>
+            <ul className={`nav-links ${isMenuOpen ? "show" : ""}`}>
               <li>
                 <Link to="/">Dashboard</Link>
               </li>

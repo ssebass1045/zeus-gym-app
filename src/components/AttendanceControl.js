@@ -1,54 +1,84 @@
-import React, { useContext } from 'react';
-import { DataContext } from '../contexts/DataContext';
-import './AttendanceControl.css';
+import React, { useContext } from "react";
+import { DataContext } from "../contexts/DataContext";
+import { auth } from "../firebaseConfig";
+import "./AttendanceControl.css";
 
 const AttendanceControl = ({ userId }) => {
-  const { users, updateUser, attendances, addAttendance } = useContext(DataContext);
-  const user = users.find(u => u.id === userId);
+  const { users, updateUser, attendances, addAttendance } =
+    useContext(DataContext);
+  const user = users.find((u) => u.id === userId);
 
-  const handleMarkAttendance = () => {
+  const handleMarkAttendance = async () => {
     const today = new Date().toISOString().substr(0, 10);
-    
+
     // Verificar días disponibles
     const diasDisponibles = 15 - (user.diasHabiles || 0);
     if (diasDisponibles <= 0) {
-      alert('El usuario ya ha consumido todos sus días de tiquetera.');
+      alert("El usuario ya ha consumido todos sus días de tiquetera.");
       return;
     }
 
     const updatedUser = { ...user };
     updatedUser.diasHabiles = (updatedUser.diasHabiles || 0) + 1;
+    const remainingDays = Math.max(0, 15 - updatedUser.diasHabiles);
 
-    // Si es la primera asistencia, establecer fecha de vencimiento
-    if (updatedUser.diasHabiles === 1) {
+    // Si no tiene fecha de vencimiento, establecerla a un mes
+    if (!updatedUser.fechaVencimiento) {
       const expirationDate = new Date();
-      expirationDate.setDate(expirationDate.getDate() + 60);
+      expirationDate.setMonth(expirationDate.getMonth() + 1);
       updatedUser.fechaVencimiento = expirationDate.toISOString().substr(0, 10);
     }
 
-    updateUser(updatedUser);
-    addAttendance({
+    await updateUser(updatedUser);
+    await addAttendance({
       userId: userId,
       date: today,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
     });
-    
-    alert(`Asistencia registrada. Días restantes: ${diasDisponibles - 1}`);
+
+    try {
+      const token = await auth.currentUser?.getIdToken();
+      if (token) {
+        await fetch("/api/notifications/attendance", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            userId,
+            date: today,
+            remainingDays,
+            usedDays: updatedUser.diasHabiles,
+          }),
+        });
+      }
+    } catch (err) {
+      console.error("Error enviando WhatsApp de tiquetera:", err);
+    }
+
+    alert(`Asistencia registrada. Días restantes: ${remainingDays}`);
   };
 
   // Función para reiniciar tiquetera
   const handleResetTiquetera = () => {
-    if (window.confirm('¿Estás seguro de reiniciar la tiquetera? Se perderán todos los días utilizados.')) {
+    if (
+      window.confirm(
+        "¿Estás seguro de reiniciar la tiquetera? Se perderán todos los días utilizados.",
+      )
+    ) {
       const updatedUser = { ...user };
       updatedUser.diasHabiles = 0;
       updatedUser.fechaVencimiento = null;
-      
+
       updateUser(updatedUser);
-      alert('Tiquetera reiniciada correctamente.');
+      alert("Tiquetera reiniciada correctamente.");
     }
   };
 
-  const userAttendances = attendances.filter(a => a.userId === userId).sort((a, b) => new Date(b.date) - new Date(a.date));
+  const userAttendances = attendances
+    .filter((a) => a.userId === userId)
+    .sort((a, b) => new Date(b.date) - new Date(a.date));
 
   return (
     <div className="attendance-card">
@@ -64,7 +94,10 @@ const AttendanceControl = ({ userId }) => {
         </div>
       </div>
       <div className="attendance-buttons">
-        <button onClick={handleMarkAttendance} disabled={(user.diasHabiles || 0) >= 15}>
+        <button
+          onClick={handleMarkAttendance}
+          disabled={(user.diasHabiles || 0) >= 15}
+        >
           Marcar Asistencia Hoy
         </button>
         <button onClick={handleResetTiquetera} className="btn btn-warning">
@@ -75,9 +108,11 @@ const AttendanceControl = ({ userId }) => {
         <h4>Historial de Asistencias</h4>
         {userAttendances.length > 0 ? (
           <ul className="attendance-list">
-            {userAttendances.map(a => (
+            {userAttendances.map((a) => (
               <li key={a.id} className="attendance-item">
-                {a.date} {a.timestamp && `- ${new Date(a.timestamp).toLocaleTimeString()}`}
+                {a.date}{" "}
+                {a.timestamp &&
+                  `- ${new Date(a.timestamp).toLocaleTimeString()}`}
               </li>
             ))}
           </ul>

@@ -63,7 +63,7 @@ const UserProfile = () => {
     return date.toISOString().split("T")[0];
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     const calculateIMC = (weight, height) => {
       if (!weight || !height) return 0;
       const heightInMeters = height / 100;
@@ -99,29 +99,75 @@ const UserProfile = () => {
       Tiquetera: 50000,
     };
     const costoPlan = planPrices[editableUser.plan] || 0;
-    const updatedDebe = costoPlan - parseFloat(editableUser.pagoRealizado || 0);
+    const pagoRealizado = parseFloat(editableUser.pagoRealizado || 0);
+    const updatedDebe = costoPlan - pagoRealizado;
+    const isRenewalEdit =
+      editableUser.plan !== user.plan ||
+      editableUser.fechaIngreso !== user.fechaIngreso;
 
     let updatedFechaVencimiento = editableUser.fechaVencimiento;
-    if (
-      editableUser.plan !== user.plan ||
-      editableUser.fechaIngreso !== user.fechaIngreso
-    ) {
+    if (isRenewalEdit) {
       updatedFechaVencimiento = calculateDueDate(
         editableUser.plan,
         editableUser.fechaIngreso,
       );
     }
 
-    updateUser({
+    const updatedUser = {
       ...editableUser,
       imc: updatedIMC,
       imcCategory: updatedIMCCategory,
       precioPlan: costoPlan,
       debe: updatedDebe,
       fechaVencimiento: updatedFechaVencimiento,
-    });
+    };
+
+    if (isRenewalEdit) {
+      const nuevoPago = {
+        fecha: editableUser.fechaIngreso,
+        monto: pagoRealizado,
+        tipo: "Renovación",
+        plan: editableUser.plan,
+        notas: "Renovación generada desde editar perfil",
+      };
+
+      updatedUser.historialPagos = [
+        ...(editableUser.historialPagos || []),
+        nuevoPago,
+      ];
+
+      if (updatedUser.plan === "Tiquetera") {
+        updatedUser.diasHabiles = 0;
+      }
+    }
+
+    await updateUser(updatedUser);
+    setEditableUser(updatedUser);
+
+    if (isRenewalEdit) {
+      try {
+        const token = await auth.currentUser?.getIdToken();
+        if (token) {
+          await fetch("/api/notifications/renewal", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify({ userId: updatedUser.id }),
+          });
+        }
+      } catch (e) {
+        console.error("Error enviando WhatsApp de renovación:", e);
+      }
+    }
+
     setIsEditing(false);
-    alert("Información del usuario actualizada correctamente.");
+    alert(
+      isRenewalEdit
+        ? "Perfil actualizado y renovación registrada correctamente."
+        : "Información del usuario actualizada correctamente.",
+    );
   };
 
   const handleCancel = () => {
@@ -354,11 +400,18 @@ const UserProfile = () => {
   const getStatus = () => {
     const today = new Date();
     const expirationDate = new Date(user.fechaVencimiento);
+    const tiqueteraExhausted =
+      user.plan === "Tiquetera" && (user.diasHabiles || 0) >= 15;
 
     if (user.debe > 0) {
       return <span className="status-badge status-debt">Con Deuda</span>;
     }
-    if (user.plan !== "Tiquetera" && expirationDate < today) {
+    if (tiqueteraExhausted) {
+      return (
+        <span className="status-badge status-expired">Tiquetera Agotada</span>
+      );
+    }
+    if (!Number.isNaN(expirationDate.getTime()) && expirationDate < today) {
       return <span className="status-badge status-expired">Vencido</span>;
     }
     return <span className="status-badge status-active">Activo</span>;

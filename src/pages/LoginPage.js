@@ -1,25 +1,30 @@
 // src/pages/LoginPage.js
-import React, { useState } from 'react';
-import { auth } from '../firebaseConfig';
-import { signInWithEmailAndPassword } from 'firebase/auth';
-import './LoginPage.css';
+import React, { useState } from "react";
+import { auth } from "../firebaseConfig";
+import { signInWithEmailAndPassword } from "firebase/auth";
+import "./LoginPage.css";
 
 const LoginPage = () => {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
   const handleLogin = async (e) => {
     e.preventDefault();
     setLoading(true);
-    setError('');
+    setError("");
 
     try {
       await signInWithEmailAndPassword(auth, email, password);
     } catch (err) {
-      let errorMessage = "Ocurrió un error al iniciar sesión. Por favor, inténtalo de nuevo.";
-      if (err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password' || err.code === 'auth/invalid-credential') {
+      let errorMessage =
+        "Ocurrió un error al iniciar sesión. Por favor, inténtalo de nuevo.";
+      if (
+        err.code === "auth/user-not-found" ||
+        err.code === "auth/wrong-password" ||
+        err.code === "auth/invalid-credential"
+      ) {
         errorMessage = "Correo electrónico o contraseña incorrectos.";
       }
       setError(errorMessage);
@@ -34,13 +39,13 @@ const LoginPage = () => {
       <div className="login-container">
         {/* --- NUEVO: Contenedor del Logo --- */}
         <div className="login-logo">
-          {/* Puedes poner una imagen aquí: <img src="/path/to/logo.png" alt="Zeus Gym Logo" /> */}
-          {/* O usar un icono o texto estilizado */}
-          <span>⚡</span>
+          <img src="/zeus_logo.jpeg" alt="Logo ZEUS GYM" />
         </div>
         <h2>ZEUS GYM</h2>
-        <p className="login-subtitle">Inicia sesión para gestionar tu gimnasio</p>
-        
+        <p className="login-subtitle">
+          Inicia sesión para gestionar tu gimnasio
+        </p>
+
         <form onSubmit={handleLogin}>
           <div className="form-group">
             <label htmlFor="email">Correo Electrónico</label>
@@ -66,7 +71,7 @@ const LoginPage = () => {
           </div>
           {error && <p className="error-message">{error}</p>}
           <button type="submit" className="login-button" disabled={loading}>
-            {loading ? 'Iniciando sesión...' : 'Iniciar Sesión'}
+            {loading ? "Iniciando sesión..." : "Iniciar Sesión"}
           </button>
         </form>
       </div>

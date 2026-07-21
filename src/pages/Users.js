@@ -71,7 +71,7 @@ const Users = () => {
       const date = new Date(startDate);
       if (plan === "Quincena") {
         date.setDate(date.getDate() + 15);
-      } else if (plan === "Mensualidad") {
+      } else if (plan === "Mensualidad" || plan === "Tiquetera") {
         date.setMonth(date.getMonth() + 1);
       }
       return date.toISOString().split("T")[0];
@@ -98,6 +98,7 @@ const Users = () => {
       fechaVencimiento: fechaVencimiento,
       precioPlan: costoPlan,
       debe: debe,
+      diasHabiles: newUser.plan === "Tiquetera" ? 0 : newUser.diasHabiles || 0,
       diasHabilesRestantes: newUser.plan === "Tiquetera" ? 15 : 0,
       diasAsistencia: 0,
       historialPagos: [
@@ -211,11 +212,18 @@ const Users = () => {
   const getUserStatus = (user) => {
     const today = new Date();
     const expirationDate = new Date(user.fechaVencimiento);
+    const tiqueteraExhausted =
+      user.plan === "Tiquetera" && (user.diasHabiles || 0) >= 15;
 
     if (user.debe > 0) {
       return <span className="status-badge status-debt">Con Deuda</span>;
     }
-    if (user.plan !== "Tiquetera" && expirationDate < today) {
+    if (tiqueteraExhausted) {
+      return (
+        <span className="status-badge status-expired">Tiquetera Agotada</span>
+      );
+    }
+    if (!Number.isNaN(expirationDate.getTime()) && expirationDate < today) {
       return <span className="status-badge status-expired">Vencido</span>;
     }
     return <span className="status-badge status-active">Activo</span>;

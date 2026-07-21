@@ -38,6 +38,36 @@ const validateEvolutionConfig = ({ requireNumber } = {}) => {
   return { apiKey, instanceName };
 };
 
+const parseJsonSafe = async (res) => {
+  const bodyText = await res.text();
+  let bodyJson = null;
+  try {
+    bodyJson = JSON.parse(bodyText);
+  } catch {
+    bodyJson = { raw: bodyText };
+  }
+  return bodyJson;
+};
+
+const postSendText = async ({ apiKey, instanceName, body }) => {
+  const res = await fetch(
+    `${EVOLUTION_BASE_URL}/message/sendText/${encodeURIComponent(
+      instanceName,
+    )}`,
+    {
+      method: "POST",
+      headers: {
+        apikey: apiKey,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(body),
+    },
+  );
+
+  const bodyJson = await parseJsonSafe(res);
+  return { res, bodyJson };
+};
+
 const getConnectionState = async () => {
   const { apiKey, instanceName } = validateEvolutionConfig();
   const res = await fetch(
@@ -52,13 +82,7 @@ const getConnectionState = async () => {
     },
   );
 
-  const bodyText = await res.text();
-  let bodyJson = null;
-  try {
-    bodyJson = JSON.parse(bodyText);
-  } catch {
-    bodyJson = { raw: bodyText };
-  }
+  const bodyJson = await parseJsonSafe(res);
 
   if (!res.ok) {
     const err = new Error(`Evolution connectionState failed: ${res.status}`);
@@ -77,35 +101,48 @@ const sendTextMessage = async ({ to, text }) => {
   });
   if (!number) throw new Error("Invalid WhatsApp number.");
 
-  const res = await fetch(
-    `${EVOLUTION_BASE_URL}/message/sendText/${encodeURIComponent(
-      instanceName,
-    )}`,
-    {
-      method: "POST",
-      headers: {
-        apikey: apiKey,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        number,
-        text,
-        delay: 1200,
-        linkPreview: false,
-      }),
+  const modernPayload = {
+    number,
+    text,
+    delay: 1200,
+    linkPreview: false,
+  };
+  const legacyPayload = {
+    number,
+    textMessage: {
+      text,
     },
-  );
+    options: {
+      delay: 1200,
+      presence: "composing",
+      linkPreview: false,
+    },
+  };
 
-  const bodyText = await res.text();
-  let bodyJson = null;
-  try {
-    bodyJson = JSON.parse(bodyText);
-  } catch {
-    bodyJson = { raw: bodyText };
+  let { res, bodyJson } = await postSendText({
+    apiKey,
+    instanceName,
+    body: modernPayload,
+  });
+
+  if (!res.ok && res.status === 400) {
+    const retry = await postSendText({
+      apiKey,
+      instanceName,
+      body: legacyPayload,
+    });
+    res = retry.res;
+    bodyJson = retry.bodyJson;
   }
 
   if (!res.ok) {
-    const err = new Error(`Evolution sendText failed: ${res.status}`);
+    const message =
+      bodyJson?.response?.message?.join?.(" | ") ||
+      bodyJson?.message?.join?.(" | ") ||
+      bodyJson?.response?.message ||
+      bodyJson?.message ||
+      `Evolution sendText failed: ${res.status}`;
+    const err = new Error(String(message));
     err.status = res.status;
     err.response = bodyJson;
     throw err;
